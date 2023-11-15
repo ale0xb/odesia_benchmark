@@ -21,7 +21,7 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
         dataset_path = compose_dataset_path(dataset_name, language)
 
         # si el dataset está en los elegidos por el usuario
-        if dataset_name == None or dataset_name in datasets_to_eval:
+        if dataset_name in datasets_to_eval:
             # para cada dataset buscamos el mejor modelo con nuestro grid
             for hparams in grid:
                 # cargamos los diccionarios con la config del modelo y creamos las carpetas donde lo almacenaremos
@@ -55,12 +55,25 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
                                                             dataset_path=dataset_path,
                                                             model_config=model_config,
                                                             dataset_config=dataset_config)
-                predictions = {'predictions':odesia_model.predict()}
-                print(predictions)
-                save_json(model_config['output_dir']+"/predictions.json",
-                          predictions)
+                
+                ''''''
+                odesia_model.train()
+                save_predictions(odesia_model)
+                save_evaluation_report(odesia_model)
     return     
 
+def save_predictions(model):
+    predictions = model.predict()
+    save_json(model.model_config['output_dir']+"/predictions.json", predictions)
+
+def save_evaluation_report(model):
+    evaluation_report = {}
+    for split in ['train', 'val', 'test']:
+         evaluation_output = model.evaluate(split=split)
+         evaluation_report[split] = evaluation_output
+    
+    save_json(model.model_config['output_dir']+"/evaluation.json",
+                          evaluation_report) 
 
 def odesia_generate_inform():
     return

@@ -89,7 +89,7 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
         results = self.metric.compute(predictions=predictions, references=results_prediction['references'])
         return results
     
-    def predict(self, split="test", num_examples = 300, return_references=False):
+    def predict(self, split="test", num_examples = "max", return_references=False):
         
         num_examples = len(self.dataset[split]) if num_examples == "max" else num_examples
         
@@ -107,14 +107,14 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
             del result['answer']
             result['id'] = item["id"]
             
-            if i%100 == 0:
-                print(f"Generation prediction ({i} of {num_predictions}){result}")
+            #if i%100 == 0:
+            #    print(f"Generation prediction ({i} of {num_predictions}){result}")
             
             predictions.append(result)    
             references.append({'answers' : item['answers'], "id":item["id"]})
         if return_references:
-            return {'predictions':predictions,
-                    'references':references} 
+            return {'predictions': predictions,
+                    'references' : references} 
         else:
             return predictions
                 

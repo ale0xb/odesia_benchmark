@@ -25,7 +25,7 @@ def main():
             odesia_benchmark(model=model, 
                              language=language, 
                              grid_search=hparams_to_search, 
-                             datasets_to_eval=['diann_2023'])
+                             datasets_to_eval=['dipromats_2023_t1'])
     
     
 if __name__ == "__main__":

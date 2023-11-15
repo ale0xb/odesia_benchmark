@@ -9,7 +9,7 @@ from transformers import AutoModelForSequenceClassification, DataCollatorWithPad
 from transformers import pipeline
 
 import evaluate
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, accuracy_score
 
 from odesia_core import OdesiaHFModel
 
@@ -56,8 +56,8 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
                                           is_split_into_words=True, 
                                           padding='max_length', 
                                           truncation=True, 
-                                          max_length=self.tokenizer.model_max_length)
-
+                                          max_length=self.tokenizer.model_max_length,
+                                          return_tensors="pt")
         labels = []
         for i, label in enumerate(examples[f"ner_tags_index"]):
             word_ids = tokenized_inputs.word_ids(batch_index=i)  # Map tokens to their respective word.
@@ -99,29 +99,45 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
             "accuracy": results["overall_accuracy"],
         }
     
-    def map_predict_output_to_evall(text, result):
-        '''
-        Hay varios problemas que solventar.
-        1) Pasar de texto a token
-        2) La salida anota subtokens
-        '''
-        return
+    # no funciona para evaluar el dataset en modo evall
     def predict(self, split="test"):
         inputs = self.dataset[split]
         classifier = pipeline("ner", model=self.model.to(torch.device("cpu")), tokenizer=self.tokenizer)
         results = []
         for input in inputs:
-            text = ' '.join(input['tokens'])
-            result = classifier(text)
-            if result:
-                print("eeeeeeeeeeeee",result)
-                result = result[0] 
-                start = result["start"]
-                end = result["start"]+len(result["word"].replace("##", ""))
-                tag = result["entity"]
+            input_tokens = input['tokens']
 
-                print (f"Entity: {tag}, Start:{start}, End:{end}, Token:{text[start:end]}")           
-                results.append(result)                       
+            ner_tags = [None for _ in input_tokens]
+            ner_tags_index = [None for _ in input_tokens]
+
+            text = ' '.join(input_tokens)
+            classifier_outputs = classifier(text)
+            # si clasifica los tokens
+            if classifier_outputs:
+                # para ese ejemplo vamos token por token
+                for classifier_output in classifier_outputs:
+                    # sacamos la palabra clasificada
+                    start = classifier_output["start"]
+                    end = classifier_output["start"]+len(classifier_output["word"].replace("##", ""))
+                    tag = classifier_output["entity"]
+                    token_result = text[start:end]
+                    
+                    for i, input_token in enumerate(input_tokens):
+                        if token_result == input_token:
+                            ner_tags[i] = tag
+                            ner_tags_index[i] = self.label2id[tag]
+
+                ner_tags = [ner_tag if ner_tag else 'O' for ner_tag in ner_tags]
+                ner_tags_index = [ner_tag_index if ner_tag_index else self.label2id['O'] for ner_tag_index in ner_tags_index]
+
+
+
+                result = {"test_case": self.test_case,
+                        "id_sentence":input["id_sentence"],
+                        "ner_tags":ner_tags, 
+                        "ner_tags_index":ner_tags_index}
+                                               
+                results.append(result)   
         return results
     
     
@@ -159,5 +175,35 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
             predictions = pred.predictions.argmax(axis=1)
         else:
             predictions = (pred.predictions > 0.5).astype(int)
-        f1_scores = f1_score(labels, predictions, average=None)
-        return {"f1_per_class": f1_scores.tolist()}
+        f1_scores = f1_score(labels, predictions, average=None).tolist()
+        f1_macro =  f1_score(labels, predictions, average="macro").tolist()
+        accuracy = accuracy_score(labels, predictions)
+        return {"accuracy":accuracy, "f1_macro" : f1_macro,"f1_per_class": f1_scores}
+
+    def predict(self, split="test"):
+        results = []
+        dataset = self.tokenized_dataset[split]
+        pred = self.trainer.predict(dataset)
+
+        
+        if self.num_labels <= 2:
+            predictions = pred.predictions.argmax(axis=1)
+            print(predictions)
+        else:
+            predictions = (pred.predictions > 0.5).astype(int)
+
+            for i,prediction in enumerate(predictions):
+                if self.num_labels <= 2:
+                   print(prediction)
+                   predicted_labels = self.id2label[int(prediction)]
+                else:
+                    predicted_labels = []
+                    for j,label_id in enumerate(prediction):
+                        if label_id == 1:
+                            predicted_labels.append(self.id2label[j])
+                result = {'test_case':self.test_case,
+                            'id':dataset[i]['id'],
+                            'label':predicted_labels}
+                results.append(result)
+        return results
+            
