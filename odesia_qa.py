@@ -26,7 +26,7 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
                                          tokenized_dataset=self.tokenized_dataset, 
                                          compute_metrics_function=None)
         self.metric = load("squad")
-        
+        self.predictions = {}
 
     def preprocess_function(self, examples):
         questions = [q.strip() for q in examples["question"]]
@@ -80,7 +80,10 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
         return inputs
 
     def evaluate(self, split="val"):
-        results_prediction = self.predict(split, return_references=True)
+        if split in self.predictions:
+            results_prediction = self.predictions[split]
+        else:
+            results_prediction = self.predict(split=split, num_examples= 3000, return_references=True)
         predictions = []
         # eliminamos todo de las predicciones, menos las claves que nos hacen falta
         for prediction in results_prediction['predictions']:
@@ -91,9 +94,9 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
     
     def predict(self, split="test", num_examples = "max", return_references=False):
         
-        num_examples = len(self.dataset[split]) if num_examples == "max" else num_examples
-        
+        num_examples = len(self.dataset[split]) if num_examples == "max" else num_examples        
         predictions_dataset = self.dataset[split].select(range(num_examples))
+        
         question_answerer = pipeline("question-answering", model=self.model.to(torch.device("cpu")), tokenizer=self.tokenizer)
         
         
@@ -107,16 +110,19 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
             del result['answer']
             result['id'] = item["id"]
             
-            #if i%100 == 0:
-            #    print(f"Generation prediction ({i} of {num_predictions}){result}")
+            if i%200 == 0:
+                print(f"Generation prediction ({i} of {num_predictions}){result}")
             
             predictions.append(result)    
             references.append({'answers' : item['answers'], "id":item["id"]})
+        
+        self.predictions[split] = predictions
+
         if return_references:
             return {'predictions': predictions,
                     'references' : references} 
         else:
-            return predictions
+            return {split:predictions}
                 
     def compute_metrics(self):
         return None

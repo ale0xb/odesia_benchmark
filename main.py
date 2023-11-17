@@ -1,5 +1,5 @@
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+#os.environ["CUDA_VISIBLE_DEVICES"] = '1'
 from odesia_evaluate_model import odesia_benchmark
 
 
@@ -20,12 +20,19 @@ def main():
             'weight_decay': [0.1, 0.01]
         }
     
+    hparams_to_search = {
+            'per_device_train_batch_size' : [32],
+            'learning_rate': [0.00001],
+            'weight_decay': [0.01]
+        }
+
     for language in language_models:
         for model in language_models[language]:
             odesia_benchmark(model=model, 
                              language=language, 
                              grid_search=hparams_to_search, 
-                             datasets_to_eval=['dipromats_2023_t1'])
+                             #datasets_to_eval=['dipromats_2023_t2']
+            )
     
     
 if __name__ == "__main__":

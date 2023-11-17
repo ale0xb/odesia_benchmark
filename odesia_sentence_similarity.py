@@ -20,9 +20,9 @@ class OdesiaSentenceSimilarity(OdesiaHFModel):
         self.train_dataloader = DataLoader(self.tokenized_dataset['train'], shuffle=True, batch_size=model_config['hf_parameters']['per_device_train_batch_size'])
         del model_config['hf_parameters']['per_device_train_batch_size']
         self.train_loss = losses.CosineSimilarityLoss(model=self.model)
-        self.evaluator = EmbeddingSimilarityEvaluator.from_input_examples(self.tokenized_dataset['validation'], name='sts-dev')
+        self.evaluator = EmbeddingSimilarityEvaluator.from_input_examples(self.tokenized_dataset['val'], name='sts-dev')
         
-        # Mapping from hf_paramns to SenteceTransformers Params   
+        # Mapping from hf_params to SenteceTransformers Params   
         if self.model_config['hf_parameters']['learning_rate']:
             self.model_config['hf_parameters']['optimizer_params'] = {'lr':self.model_config['hf_parameters']['learning_rate']}
             del self.model_config['hf_parameters']['learning_rate']
@@ -50,10 +50,10 @@ class OdesiaSentenceSimilarity(OdesiaHFModel):
               **self.model_config['hf_parameters'])
     
     def evaluate(self, split="val"):
-        test_evaluator = EmbeddingSimilarityEvaluator.from_input_examples(self.tokenized_dataset['validation'], name='sts-test')
+        test_evaluator = EmbeddingSimilarityEvaluator.from_input_examples(self.tokenized_dataset[split], name='sts-test')
         return test_evaluator(self.model, output_path=self.output_dir)
     
-    def predict(self, split="val"):
+    def predict(self, split="test"):
         examples = self.tokenized_dataset[split]
         predictions = []
         for example in examples:

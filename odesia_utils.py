@@ -39,7 +39,7 @@ def save_log(log_history, path):
 
 def compose_output_dir(dataset_name, model, hparams, language):
     model = remove_special_chars(model)
-    output_dir = f"trained_models/{dataset_name}_{language}/{model}/"
+    output_dir = f"trained_models/{model}/{dataset_name}_{language}/"
     for param in hparams:
         value = hparams[param]
         output_dir += f"_{param}_{value}"

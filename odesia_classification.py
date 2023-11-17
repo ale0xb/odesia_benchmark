@@ -99,14 +99,13 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
             "accuracy": results["overall_accuracy"],
         }
     
-    # no funciona para evaluar el dataset en modo evall
     def predict(self, split="test"):
         inputs = self.dataset[split]
-        classifier = pipeline("ner", model=self.model.to(torch.device("cpu")), tokenizer=self.tokenizer)
+        classifier = pipeline("ner", model=self.model.to('cpu'), tokenizer=self.tokenizer)
+       
         results = []
         for input in inputs:
             input_tokens = input['tokens']
-
             ner_tags = [None for _ in input_tokens]
             ner_tags_index = [None for _ in input_tokens]
 
@@ -133,12 +132,12 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
 
 
                 result = {"test_case": self.test_case,
-                        "id_sentence":input["id_sentence"],
+                        #"id_sentence":input["id_sentence"],
                         "ner_tags":ner_tags, 
                         "ner_tags_index":ner_tags_index}
                                                
                 results.append(result)   
-        return results
+        return {split:results}
     
     
 class OdesiaTextClassification(OdesiaUniversalClassification):
@@ -150,10 +149,15 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
         self.data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)        
 
         # Step 2. Tokenized the dataset
+        column_names = (self.dataset['train'].column_names)
+        if 'label' in column_names and dataset_config["label_column"].strip() != 'label':
+            self.dataset = self.dataset.rename_column('label', "label_old")
+        
         self.dataset = self.dataset.rename_column(dataset_config["label_column"], "label")
+
         if not self.tokenized_dataset:            
-            # para clasificación binaria
-            if self.dataset_config["hf_parameters"] and not self.dataset_config["hf_parameters"]["problem_type"]:
+            # para clasificación o multiclase
+            if self.problem_type != 'text_classification_multilabel':
                 self.dataset = self.dataset.cast_column('label', ClassLabel(names=self.label_list))
             self.tokenized_dataset = self.dataset.map(lambda ex: self.tokenizer(ex["text"], truncation=True, padding=True), batched=True)
             self.tokenized_dataset.save_to_disk(self.dataset_path_tokenized)
@@ -162,8 +166,9 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
         self.model = AutoModelForSequenceClassification.from_pretrained(
             model_path, 
             num_labels=self.num_labels, 
-            problem_type=self.dataset_config["hf_parameters"]["problem_type"]
+            problem_type= 'multi_label_classification' if self.problem_type == 'text_classification_multilabel' else None
         )
+
         self.trainer = self.load_trainer(model=self.model, 
                                          data_collator=self.data_collator, 
                                          tokenized_dataset=self.tokenized_dataset, 
@@ -173,37 +178,38 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
         labels = pred.label_ids
         if self.num_labels <= 2:
             predictions = pred.predictions.argmax(axis=1)
-        else:
+        elif self.problem_type == 'text_classification_multiclass':
+            predictions = np.argmax(pred.predictions, axis = -1)
+        elif self.problem_type == 'text_classification_multilabel':
             predictions = (pred.predictions > 0.5).astype(int)
         f1_scores = f1_score(labels, predictions, average=None).tolist()
         f1_macro =  f1_score(labels, predictions, average="macro").tolist()
         accuracy = accuracy_score(labels, predictions)
-        return {"accuracy":accuracy, "f1_macro" : f1_macro,"f1_per_class": f1_scores}
+        return {"accuracy":accuracy, "f1_macro" : f1_macro,"f1_per_class": {label_f1:f1_value for label_f1, f1_value in zip(self.label_list, f1_scores)}}
 
     def predict(self, split="test"):
         results = []
         dataset = self.tokenized_dataset[split]
         pred = self.trainer.predict(dataset)
 
-        
         if self.num_labels <= 2:
             predictions = pred.predictions.argmax(axis=1)
-            print(predictions)
-        else:
+        elif self.problem_type == 'text_classification_multiclass':
+            predictions = np.argmax(pred.predictions, axis = -1)
+        elif self.problem_type == 'text_classification_multilabel':
             predictions = (pred.predictions > 0.5).astype(int)
-
-            for i,prediction in enumerate(predictions):
-                if self.num_labels <= 2:
-                   print(prediction)
-                   predicted_labels = self.id2label[int(prediction)]
-                else:
-                    predicted_labels = []
-                    for j,label_id in enumerate(prediction):
-                        if label_id == 1:
-                            predicted_labels.append(self.id2label[j])
-                result = {'test_case':self.test_case,
-                            'id':dataset[i]['id'],
-                            'label':predicted_labels}
-                results.append(result)
-        return results
+        
+        for i,prediction in enumerate(predictions):
+            if self.problem_type == 'text_classification_multiclass':
+                predicted_labels = self.id2label[int(prediction)]
+            else:
+                predicted_labels = []
+                for j,label_id in enumerate(prediction):
+                    if label_id == 1:
+                        predicted_labels.append(self.id2label[j])
+            result = {'test_case':self.test_case,
+                        #'id':dataset[i]['id'],
+                        'label':predicted_labels}
+            results.append(result)
+        return {split:results}
             

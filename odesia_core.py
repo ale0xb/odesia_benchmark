@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import torch
 from transformers import TrainingArguments, Trainer
 from transformers import AutoTokenizer
 import os 
@@ -43,6 +44,7 @@ class OdesiaHFModel(OdesiaAbstractModel):
         self.dataset_path = dataset_path        
         self.output_dir = model_config['output_dir']
         self.test_case = dataset_config['evall_test_case']
+        self.problem_type = dataset_config['problem_type']
         
         # Tokenizer
         self.tokenizer = AutoTokenizer.from_pretrained(model_path) 
@@ -57,6 +59,7 @@ class OdesiaHFModel(OdesiaAbstractModel):
         
 
     def load_trainer(self, model, tokenized_dataset, data_collator, compute_metrics_function):        
+        
         training_args = TrainingArguments(
             output_dir=self.output_dir,
             run_name=self.output_dir,
@@ -85,5 +88,10 @@ class OdesiaHFModel(OdesiaAbstractModel):
     def evaluate(self, split="val"):
         return self.trainer.evaluate(eval_dataset=self.tokenized_dataset[split])
     
+    def purge_model(self):
+        del self.model
+        del self.tokenizer
+        torch.cuda.empty_cache()
+
     def compute_metrics(self):
         return 

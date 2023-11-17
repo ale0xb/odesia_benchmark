@@ -3,7 +3,7 @@ os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from odesia_classification import OdesiaTextClassification, OdesiaTokenClassification
 from odesia_qa import OdesiaQuestionAnswering
-from odesia_sentece_similarity import OdesiaSentenceSimilarity
+from odesia_sentence_similarity import OdesiaSentenceSimilarity
 
 
 def test_token_classification():
