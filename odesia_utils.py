@@ -60,3 +60,17 @@ class NumpyFloatValuesEncoder(json.JSONEncoder):
 def save_json(path, data):
     with open(path, 'w', encoding='utf8') as fp:
         fp.write(jsbeautifier.beautify(json.dumps(data, cls=NumpyFloatValuesEncoder, ensure_ascii=False)))
+
+def keep_keys(dictionary, keys_to_keep):
+    # Create a copy of the original dictionary to avoid modifying it directly
+    dictionary_copy = dictionary.copy()
+    
+    # Get the list of keys from the original dictionary
+    original_keys = list(dictionary_copy.keys())
+    
+    # Remove keys that are not in the list of keys to keep
+    for key in original_keys:
+        if key not in keys_to_keep:
+            del dictionary_copy[key]
+    
+    return dictionary_copy

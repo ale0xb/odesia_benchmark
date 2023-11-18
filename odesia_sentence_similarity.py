@@ -4,6 +4,7 @@ from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
 import math
 
 from odesia_core import OdesiaHFModel
+from odesia_utils import keep_keys
 
 
 class OdesiaSentenceSimilarity(OdesiaHFModel):
@@ -18,19 +19,20 @@ class OdesiaSentenceSimilarity(OdesiaHFModel):
         # Step 3. Loading model, trainer and metrics     
         self.model = SentenceTransformer(model_path)
         self.train_dataloader = DataLoader(self.tokenized_dataset['train'], shuffle=True, batch_size=model_config['hf_parameters']['per_device_train_batch_size'])
-        del model_config['hf_parameters']['per_device_train_batch_size']
         self.train_loss = losses.CosineSimilarityLoss(model=self.model)
         self.evaluator = EmbeddingSimilarityEvaluator.from_input_examples(self.tokenized_dataset['val'], name='sts-dev')
         
         # Mapping from hf_params to SenteceTransformers Params   
         if self.model_config['hf_parameters']['learning_rate']:
             self.model_config['hf_parameters']['optimizer_params'] = {'lr':self.model_config['hf_parameters']['learning_rate']}
-            del self.model_config['hf_parameters']['learning_rate']
         if self.model_config['hf_parameters']['num_train_epochs']:
             self.model_config['hf_parameters']['epochs'] = self.model_config['hf_parameters']['num_train_epochs']
-            del self.model_config['hf_parameters']['num_train_epochs']
             
         self.model_config['hf_parameters']['warmup_steps'] = math.ceil(len(self.train_dataloader) * self.model_config['hf_parameters']['epochs'] * 0.1) #10% of train data for warm-up
+
+        # Eliminamos todas las claves menos las que queremos usar en SenteceTransformers
+        self.model_config['hf_parameters'] = keep_keys(dictionary=self.model_config['hf_parameters'], 
+                  keys_to_keep=['optimizer_params', 'epochs', 'warmup_steps', 'weight_decay'])
         
     
     def preprocess_function(self, dataset, max_score=5.0):         
@@ -46,7 +48,7 @@ class OdesiaSentenceSimilarity(OdesiaHFModel):
     def train(self):
         self.model.fit(train_objectives=[(self.train_dataloader, self.train_loss)],
               evaluator=self.evaluator,
-              output_path=self.output_dir,
+              output_path=self.output_dir+'/model',
               **self.model_config['hf_parameters'])
     
     def evaluate(self, split="val"):
