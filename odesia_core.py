@@ -44,14 +44,19 @@ class OdesiaHFModel(OdesiaAbstractModel):
         self.dataset_path = dataset_path        
         self.output_dir = model_config['output_dir']
         self.test_case = dataset_config['evall_test_case']
-        self.problem_type = dataset_config['problem_type']
-        
+        self.problem_type = dataset_config['problem_type']        
         # Tokenizer
         
         
         # Load dataset if it was tokenized before
-        self.dataset = load_dataset('json', data_files=dataset_path)           
-        self.dataset_path_tokenized = "/".join(dataset_path['train'].split('/')[:-1])+"/tokenized_"+model_path.replace("/","-")
+        self.dataset = load_dataset('json', data_files=dataset_path)   
+        # language configs
+        language = ''
+        if dataset_path['train'].find('_es') > -1:
+            language = 'es' 
+        elif dataset_path['train'].find('_en') > -1:
+            language = 'en'     
+        self.dataset_path_tokenized = "/".join(dataset_path['train'].split('/')[:-1])+"/tokenized_"+model_path.replace("/","-")+"_"+language
         if os.path.isdir(self.dataset_path_tokenized):
             print("Loading pretokenized dataset...")
             self.tokenizer = AutoTokenizer.from_pretrained(model_path) 

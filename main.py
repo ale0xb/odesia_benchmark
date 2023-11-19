@@ -5,26 +5,27 @@ from odesia_evaluate_model import odesia_benchmark
 
 
 def main():
-    language_models = {'en':['roberta-large','bert-base-multilingual-cased','ixa-ehu/ixambert-base-cased','distilbert-base-uncased',  
-                            'xlm-roberta-base', 
-                              'distilbert-base-multilingual-cased', 
-                             'roberta-base', 'bert-base-cased', 'bert-base-uncased', 
-                             # 'xlm-roberta-large',
+    language_models = {'en':['roberta-base','bert-base-multilingual-cased','distilbert-base-uncased',   
+                             'bert-base-cased',  'distilbert-base-multilingual-cased',                                                                                       
+                             # 'roberta-large', 'xlm-roberta-large', 'xlm-roberta-base','ixa-ehu/ixambert-base-cased',
                              ],
-                    'es':['xlm-roberta-large','PlanTL-GOB-ES/roberta-large-bne','bert-base-multilingual-cased',
-                          'ixa-ehu/ixambert-base-cased', 'CenIA/distillbert-base-spanish-uncased','xlm-roberta-base', 
-                         'distilbert-base-multilingual-cased', 'PlanTL-GOB-ES/roberta-base-bne',
-                         'bertin-project/bertin-roberta-base-spanish',
-                        'dccuchile/bert-base-spanish-wwm-cased', 
+                    'es':['PlanTL-GOB-ES/roberta-base-bne', 'dccuchile/bert-base-spanish-wwm-cased',  'bertin-project/bertin-roberta-base-spanish',
+                          'bert-base-multilingual-cased','distilbert-base-multilingual-cased', 'CenIA/distillbert-base-spanish-uncased',                            
+                          # 'ixa-ehu/ixambert-base-cased', 'xlm-roberta-large', 'xlm-roberta-base', 'PlanTL-GOB-ES/roberta-large-bne', 
                         ],
             } 
     
+    '''hparams_to_search = {
+            'per_device_train_batch_size' : [8],
+            'gradient_accumulation_steps' : [4, 2],
+            'learning_rate': [0.00001, 0.00003, 0.00005],
+            'weight_decay': [0.1, 0.01]
+        }'''
     hparams_to_search = {
             'per_device_train_batch_size' : [32, 16],
             'learning_rate': [0.00001, 0.00003, 0.00005],
             'weight_decay': [0.1, 0.01]
         }
-    
     total_iterations = len(language_models['es'])+len(language_models['en'])
     current_iterations = 0
     for language in language_models:
@@ -36,7 +37,7 @@ def main():
             odesia_benchmark(model=model, 
                              language=language, 
                              grid_search=hparams_to_search, 
-                             datasets_to_eval=['multiconer_2022']
+                             # datasets_to_eval=['multiconer_2022']
             )
             
             # calculamos el tiempo de esta ejecucion

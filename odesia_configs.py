@@ -126,7 +126,7 @@ DATASETS = [{'name' : 'dipromats_2023_t1',
 GENERIC_MODEL_CONFIG = {
         "output_dir" : "",
         "hf_parameters": {
-                'per_device_train_batch_size':8,
+                'per_device_train_batch_size': 8,
                 'num_train_epochs': 5,
                 'evaluation_strategy':"no",
                 'save_strategy':"no",
