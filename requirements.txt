@@ -2,6 +2,7 @@ transformers
 evaluate
 scikit-learn
 datasets
-shutil
 sentence-transformers
 jsbeautifier
+accelerate
+
