@@ -47,16 +47,19 @@ class OdesiaHFModel(OdesiaAbstractModel):
         self.problem_type = dataset_config['problem_type']
         
         # Tokenizer
-        self.tokenizer = AutoTokenizer.from_pretrained(model_path) 
-        self.tokenized_dataset = None
+        
         
         # Load dataset if it was tokenized before
         self.dataset = load_dataset('json', data_files=dataset_path)           
         self.dataset_path_tokenized = "/".join(dataset_path['train'].split('/')[:-1])+"/tokenized_"+model_path.replace("/","-")
         if os.path.isdir(self.dataset_path_tokenized):
             print("Loading pretokenized dataset...")
+            self.tokenizer = AutoTokenizer.from_pretrained(model_path) 
+            self.tokenized_dataset = None
             self.tokenized_dataset = load_from_disk(self.dataset_path_tokenized)
-        
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(model_path, add_prefix_space=True) 
+            self.tokenized_dataset = None
 
     def load_trainer(self, model, tokenized_dataset, data_collator, compute_metrics_function):        
         

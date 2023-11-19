@@ -5,10 +5,11 @@ from odesia_evaluate_model import odesia_benchmark
 
 
 def main():
-    language_models = {'en':['xlm-roberta-large','bert-base-multilingual-cased','roberta-large','ixa-ehu/ixambert-base-cased','distilbert-base-uncased',  
+    language_models = {'en':['roberta-large','bert-base-multilingual-cased','ixa-ehu/ixambert-base-cased','distilbert-base-uncased',  
                             'xlm-roberta-base', 
                               'distilbert-base-multilingual-cased', 
-                             'roberta-base', 'bert-base-cased', 'bert-base-uncased',
+                             'roberta-base', 'bert-base-cased', 'bert-base-uncased', 
+                             # 'xlm-roberta-large',
                              ],
                     'es':['xlm-roberta-large','PlanTL-GOB-ES/roberta-large-bne','bert-base-multilingual-cased',
                           'ixa-ehu/ixambert-base-cased', 'CenIA/distillbert-base-spanish-uncased','xlm-roberta-base', 
@@ -19,7 +20,7 @@ def main():
             } 
     
     hparams_to_search = {
-            'per_device_train_batch_size' : [8, 16],
+            'per_device_train_batch_size' : [32, 16],
             'learning_rate': [0.00001, 0.00003, 0.00005],
             'weight_decay': [0.1, 0.01]
         }
