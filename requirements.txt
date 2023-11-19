@@ -5,4 +5,5 @@ datasets
 sentence-transformers
 jsbeautifier
 accelerate
+seqeval
 
