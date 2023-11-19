@@ -5,7 +5,7 @@ from transformers import AutoTokenizer
 import os 
 from datasets import load_from_disk
 from datasets import load_dataset
-
+import copy
  
 class OdesiaAbstractModel(ABC):
     @abstractmethod
@@ -38,8 +38,8 @@ class OdesiaHFModel(OdesiaAbstractModel):
         super().__init__(model_path, dataset_path, model_config, dataset_config)
         
         # Basic configs
-        self.model_config = model_config
-        self.dataset_config = dataset_config
+        self.model_config = copy.copy(model_config)
+        self.dataset_config = copy.copy(dataset_config)
         self.model_path = model_path
         self.dataset_path = dataset_path        
         self.output_dir = model_config['output_dir']

@@ -2,7 +2,7 @@ from torch.utils.data import DataLoader
 from sentence_transformers import SentenceTransformer, losses, util, InputExample
 from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
 import math
-
+import pandas as pd
 from odesia_core import OdesiaHFModel
 from odesia_utils import keep_keys
 
@@ -20,7 +20,7 @@ class OdesiaSentenceSimilarity(OdesiaHFModel):
         self.model = SentenceTransformer(model_path)
         self.train_dataloader = DataLoader(self.tokenized_dataset['train'], shuffle=True, batch_size=model_config['hf_parameters']['per_device_train_batch_size'])
         self.train_loss = losses.CosineSimilarityLoss(model=self.model)
-        self.evaluator = EmbeddingSimilarityEvaluator.from_input_examples(self.tokenized_dataset['val'], name=f"{self.test_case}")
+        self.evaluator = EmbeddingSimilarityEvaluator.from_input_examples(self.tokenized_dataset['val'])
         
         # Mapping from hf_params to SenteceTransformers Params   
         if self.model_config['hf_parameters']['learning_rate']:
@@ -52,13 +52,21 @@ class OdesiaSentenceSimilarity(OdesiaHFModel):
               **self.model_config['hf_parameters'])
     
     def evaluate(self, split="val"):
-        test_evaluator = EmbeddingSimilarityEvaluator.from_input_examples(self.tokenized_dataset[split], name=f"{self.test_case}_{split}")
-        return test_evaluator(self.model, output_path=f"{self.output_dir}/model")
+        output_path = f"{self.output_dir}/model/"
+        test_evaluator = EmbeddingSimilarityEvaluator.from_input_examples(self.tokenized_dataset[split], name=split)
+        # generamos los resultados
+        test_evaluator_call = test_evaluator(self.model, output_path=output_path)
+
+        # por alguna extraña razón sentence transformers no devuelve las similitudes en variables sino que las guarda en un csv
+        csv_results = pd.read_csv(f"{output_path}/similarity_evaluation_{split}_results.csv")
+        results = csv_results.to_dict('records')[0]
+        return results
     
     def predict(self, split="test"):
         examples = self.tokenized_dataset[split]
+        examples_originals = self.dataset[split]
         predictions = []
-        for example in examples:
+        for example, example_original in zip(examples, examples_originals):
             text1, text2 = example.texts
             
             # Obtener las incrustaciones (embeddings) para los textos
@@ -67,13 +75,14 @@ class OdesiaSentenceSimilarity(OdesiaHFModel):
 
             # Calcular la puntuación de similitud utilizando el coseno de los embeddings
             similarity_score = util.pytorch_cos_sim(embedding1, embedding2).item()
-
+            
             # Imprimir o almacenar la similitud según sea necesario
             predictions.append({
-                            "sentence1": text1,
-                            "sentence2": text2,
+                            #"sentence1": text1,
+                            #"sentence2": text2,                            
                             "similarity_score": similarity_score*self.max_score,
-                            "test_case":self.test_case
+                            "test_case":self.test_case,
+                            'id': int(example_original['id'])
                         })
             # Agregar la similitud como una nueva propiedad a los ejemplos si lo deseas
             # example.similarity = similarity_score

@@ -2,6 +2,7 @@ import os
 from itertools import product
 import jsbeautifier
 import json
+import glob
 
 import numpy as np
 def create_directories(path):
@@ -74,3 +75,29 @@ def keep_keys(dictionary, keys_to_keep):
             del dictionary_copy[key]
     
     return dictionary_copy
+
+def get_documents_in_folder(folder_path):
+    # Use os.path.join to get the complete path and '*' pattern to get all files in the folder
+    complete_path = os.path.join(folder_path, '*.json')    
+    # Use glob to get the list of files matching the pattern
+    documents = glob.glob(complete_path)    
+    return documents
+
+def add_ids_to_dataset(dataset_path):
+    documents_in_folder = get_documents_in_folder(dataset_path)
+    i = 0
+    for path in documents_in_folder:
+        data = json.load(open(path))
+        for row in data:
+            row['id'] = i
+            i += 1
+        save_json(data=data, path=path)
+        
+def rename_item_dataset(dataset_path, last_name, new_name):
+    documents_in_folder = get_documents_in_folder(dataset_path)
+    for path in documents_in_folder:
+        data = json.load(open(path))
+        for row in data:
+            row[new_name] = row[last_name]
+            del row[last_name]
+        save_json(data=data, path=path)

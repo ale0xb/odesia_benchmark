@@ -132,7 +132,7 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
 
 
                 result = {"test_case": self.test_case,
-                        #"id_sentence":input["id_sentence"],
+                        "id":input["id"],
                         "ner_tags":ner_tags, 
                         "ner_tags_index":ner_tags_index}
                                                
@@ -208,7 +208,7 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
                     if label_id == 1:
                         predicted_labels.append(self.id2label[j])
             result = {'test_case':self.test_case,
-                        #'id':dataset[i]['id'],
+                        'id':dataset[i]['id'],
                         'label':predicted_labels}
             results.append(result)
         return {split:results}

@@ -1,22 +1,17 @@
 
-DATASETS = [{'name' :'diann_2023',
-            'dataset_config'    : {"evall_test_case":"DIAN2023",
-                                  'problem_type':'token_classification',
-                                   "label2id":{'O':0,
-                                              'B-DIS': 1, 
-                                              'I-DIS': 2}
-                                    }},
-            {'name' : 'dipromats_2023_t1',             
+DATASETS = [{'name' : 'dipromats_2023_t1',             
              'dataset_config':{"evall_test_case":"DIPROMATS2023",
+                               'main_metric': 'eval_f1_macro',
                                'problem_type':'text_classification_multiclass',
                                 "label2id":{"false": 0, 
                                            "true": 1},
                                'label_column':'label_task1_hf',}
-             }            
+             },            
             
-            ,{'name':'dipromats_2023_t2',              
+            {'name':'dipromats_2023_t2',              
              'dataset_config':{
                                 "evall_test_case":"DIPROMATS2023",
+                                'main_metric': 'eval_f1_macro',
                                 'problem_type':'text_classification_multilabel',
                                 "label2id":{"1 appeal to commonality": 0,
                                             "2 discrediting the opponent": 1,
@@ -30,6 +25,7 @@ DATASETS = [{'name' :'diann_2023',
             ,{'name':'dipromats_2023_t3',              
              'dataset_config':{
                                 "evall_test_case":"DIPROMATS2023",
+                                'main_metric': 'eval_f1_macro',
                                 'problem_type':'text_classification_multilabel',
                                 "label2id":{"1 appeal to commonality - ad populum":0,
                                         "1 appeal to commonality - flag waving":1,
@@ -51,6 +47,7 @@ DATASETS = [{'name' :'diann_2023',
             
             ,{'name':'exist_2022_t1',              
              'dataset_config':{"evall_test_case":"EXIST2022",
+                               'main_metric': 'eval_f1_macro',
                                'problem_type':'text_classification_multiclass',
                                 "label2id":{'non-sexist':0,
                                             'sexist':1},
@@ -60,6 +57,7 @@ DATASETS = [{'name' :'diann_2023',
             
             ,{'name':'exist_2022_t2',              
              'dataset_config':{"evall_test_case":"EXIST2022",
+                               'main_metric': 'eval_f1_macro',
                                'problem_type':'text_classification_multiclass',
                                 "label2id":{'sexual-violence':0,
                                             'stereotyping-dominance':1, 
@@ -69,18 +67,30 @@ DATASETS = [{'name' :'diann_2023',
                                             'objectification': 5},
                                 "label_column":"label_text",
                                 }
-             }
+             },
             
-            ,{'name':'mldoc_2018',              
+            {'name':'mldoc_2018',              
              'dataset_config':{"evall_test_case":"MLDOC",
+                               'main_metric': 'eval_f1_macro',
                                'problem_type':'text_classification_multiclass',
                                 "label2id":{'MCAT':0, 'GCAT':1, 'ECAT':2,'CCAT':3},
                                 "label_column":"label_text",
                                 }
-            }
+            },
             
-            ,{'name':'multiconer_2022',              
+            {'name' :'diann_2023',
+            'dataset_config'    : {"evall_test_case":"DIAN2023",
+                                   'main_metric': 'eval_f1',
+                                  'problem_type':'token_classification',
+                                   "label2id":{'O':0,
+                                              'B-DIS': 1, 
+                                              'I-DIS': 2}
+                                    }
+            },
+            
+            {'name':'multiconer_2022',              
              'dataset_config':{"evall_test_case":'CONER2022',
+                               'main_metric': 'eval_f1',
                                'problem_type':'token_classification',
                                "label2id":{'B-GRP': 0, 
                                                'B-CW': 1, 
@@ -101,13 +111,14 @@ DATASETS = [{'name' :'diann_2023',
             
             ,{'name':'sqad_2022_squad_2016',              
              'dataset_config':{'evall_test_case':"SAQ2022",
+                               'main_metric': 'f1',
                                'problem_type':'question_answering'}}
             
             ,{'name':'sts_2017',              
              'dataset_config':{'evall_test_case':"STS2017",
+                               'main_metric': 'cosine_pearson',
                                'problem_type':'sentence_similarity',
                                'max_score':5.0}},
-
             
         ]
 
@@ -116,7 +127,7 @@ GENERIC_MODEL_CONFIG = {
         "output_dir" : "",
         "hf_parameters": {
                 'per_device_train_batch_size':8,
-                'num_train_epochs':1,
+                'num_train_epochs': 5,
                 'evaluation_strategy':"no",
                 'save_strategy':"no",
                 'load_best_model_at_end':True}
