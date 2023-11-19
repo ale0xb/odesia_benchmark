@@ -16,7 +16,9 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
 
         # Step 2. Tokenized the dataset 
         if not self.tokenized_dataset:            
-            self.tokenized_dataset = self.dataset.map(self.preprocess_function, batched=True, remove_columns=self.dataset["train"].column_names)
+            self.tokenized_dataset = self.dataset.map(self.preprocess_function, 
+                                                      batched=True, 
+                                                      remove_columns=self.dataset["train"].column_names)
             self.tokenized_dataset.save_to_disk(self.dataset_path_tokenized)
 
         # Step 3. Loading model, trainer and metrics     

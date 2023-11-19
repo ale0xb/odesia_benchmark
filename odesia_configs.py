@@ -130,6 +130,7 @@ GENERIC_MODEL_CONFIG = {
                 'num_train_epochs': 5,
                 'evaluation_strategy':"no",
                 'save_strategy':"no",
+                #'fp16': True,
                 'load_best_model_at_end':True}
 }
 

@@ -52,7 +52,7 @@ class OdesiaHFModel(OdesiaAbstractModel):
         
         # Load dataset if it was tokenized before
         self.dataset = load_dataset('json', data_files=dataset_path)           
-        self.dataset_path_tokenized = "/".join(dataset_path['train'].split('/')[:-1])+"/tokenized"
+        self.dataset_path_tokenized = "/".join(dataset_path['train'].split('/')[:-1])+"/tokenized_"+model_path.replace("/","-")
         if os.path.isdir(self.dataset_path_tokenized):
             print("Loading pretokenized dataset...")
             self.tokenized_dataset = load_from_disk(self.dataset_path_tokenized)

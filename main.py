@@ -5,8 +5,8 @@ from odesia_evaluate_model import odesia_benchmark
 
 
 def main():
-    language_models = {'en':['distilbert-base-uncased', 'xlm-roberta-large', 'roberta-large', 'bert-base-multilingual-cased',
-                            'xlm-roberta-base','ixa-ehu/ixambert-base-cased', 
+    language_models = {'en':['xlm-roberta-large','bert-base-multilingual-cased','roberta-large','ixa-ehu/ixambert-base-cased','distilbert-base-uncased',  
+                            'xlm-roberta-base', 
                               'distilbert-base-multilingual-cased', 
                              'roberta-base', 'bert-base-cased', 'bert-base-uncased',
                              ],
@@ -19,7 +19,7 @@ def main():
             } 
     
     hparams_to_search = {
-            'per_device_train_batch_size' : [32, 16],
+            'per_device_train_batch_size' : [8, 16],
             'learning_rate': [0.00001, 0.00003, 0.00005],
             'weight_decay': [0.1, 0.01]
         }
@@ -35,7 +35,7 @@ def main():
             odesia_benchmark(model=model, 
                              language=language, 
                              grid_search=hparams_to_search, 
-                             datasets_to_eval=['sts_2017']
+                             datasets_to_eval=['multiconer_2022']
             )
             
             # calculamos el tiempo de esta ejecucion
