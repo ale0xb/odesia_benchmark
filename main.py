@@ -4,14 +4,15 @@ from odesia_evaluate_model import odesia_benchmark
 
 
 def main():
-    language_models = {'en':['distilbert-base-uncased','xlm-roberta-base','xlm-roberta-large', 'bert-base-multilingual-cased',
-                'distilbert-base-multilingual-cased', 'roberta-base', 'roberta-large',
-                 'bert-base-cased', 'bert-base-uncased','ixa-ehu/ixambert-base-cased'],
-                    'es':['CenIA/distillbert-base-spanish-uncased','xlm-roberta-base','xlm-roberta-large', 'bert-base-multilingual-cased',
-                        'distilbert-base-multilingual-cased', 'PlanTL-GOB-ES/roberta-base-bne',
-                        'PlanTL-GOB-ES/roberta-large-bne', 'bertin-project/bertin-roberta-base-spanish',
+    language_models = {'en':['xlm-roberta-large', 'roberta-large', 'ixa-ehu/ixambert-base-cased', 'bert-base-multilingual-cased', 'distilbert-base-uncased',
+                             'xlm-roberta-base', 'distilbert-base-multilingual-cased', 'roberta-base', 
+                            'bert-base-cased', 'bert-base-uncased',],
+                    'es':['xlm-roberta-large','PlanTL-GOB-ES/roberta-large-bne','bert-base-multilingual-cased','ixa-ehu/ixambert-base-cased', 
+                          'CenIA/distillbert-base-spanish-uncased','xlm-roberta-base', 
+                         'distilbert-base-multilingual-cased', 'PlanTL-GOB-ES/roberta-base-bne',
+                         'bertin-project/bertin-roberta-base-spanish',
                         'dccuchile/bert-base-spanish-wwm-cased', 
-                        'ixa-ehu/ixambert-base-cased'],
+                        ],
             } 
     
     hparams_to_search = {
@@ -31,7 +32,7 @@ def main():
             odesia_benchmark(model=model, 
                              language=language, 
                              grid_search=hparams_to_search, 
-                             datasets_to_eval=['sts_2017']
+                             #datasets_to_eval=['sts_2017']
             )
     
     
