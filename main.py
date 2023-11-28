@@ -5,20 +5,24 @@ from odesia_evaluate_model import odesia_benchmark
 
 
 def main():
-    language_models = {'es':['bertin-project/bertin-roberta-base-spanish', 'bert-base-multilingual-cased', 
-                             'distilbert-base-multilingual-cased', 'CenIA/distillbert-base-spanish-uncased',  
-                             'PlanTL-GOB-ES/roberta-base-bne',                          
-                          # 'ixa-ehu/ixambert-base-cased',  'dccuchile/bert-base-spanish-wwm-cased',  'PlanTL-GOB-ES/roberta-large-bne',,'xlm-roberta-large', 'xlm-roberta-base',
-                        ],
-                        'en':['bert-base-cased', 'roberta-large', 
-                              'distilbert-base-uncased', 'xlm-roberta-base',  
-                              'bert-base-multilingual-cased',  'xlm-roberta-large', 
-                              'distilbert-base-multilingual-cased',                                                  
-                             # ,'ixa-ehu/ixambert-base-cased',[,'roberta-base',
-                             ],
+    # big models 
+    big_language_models = {'es':['PlanTL-GOB-ES/roberta-large-bne','xlm-roberta-large', 'xlm-roberta-base',],
+                        'en':['roberta-large', 'xlm-roberta-base', 'xlm-roberta-large',],
                     
             } 
     
+    # small models
+    language_models = {'es':['bertin-project/bertin-roberta-base-spanish', 'bert-base-multilingual-cased', 
+                             'distilbert-base-multilingual-cased', 'CenIA/distillbert-base-spanish-uncased',  
+                             'PlanTL-GOB-ES/roberta-base-bne', 'dccuchile/bert-base-spanish-wwm-cased', 'ixa-ehu/ixambert-base-cased',                        
+                        ],
+                        'en':['bert-base-cased', 'distilbert-base-uncased', 
+                              'bert-base-multilingual-cased', 'distilbert-base-multilingual-cased', 
+                              'ixa-ehu/ixambert-base-cased'                                                 
+                             ],
+                    
+            }
+
     '''hparams_to_search = {
             'per_device_train_batch_size' : [8],
             'gradient_accumulation_steps' : [4, 2],
