@@ -89,6 +89,7 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
         predictions = []
         # eliminamos todo de las predicciones, menos las claves que nos hacen falta
         for prediction in results_prediction['predictions']:
+            # renombrar prediction a label
             prediction = {key: value for key, value in prediction.items() if key in ['id', 'prediction_text']}
             predictions.append(prediction)
         results = self.metric.compute(predictions=predictions, references=results_prediction['references'])

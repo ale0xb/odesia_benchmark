@@ -5,14 +5,18 @@ from odesia_evaluate_model import odesia_benchmark
 
 
 def main():
-    language_models = {'en':['roberta-base','bert-base-multilingual-cased','distilbert-base-uncased',   
-                             'bert-base-cased',  'distilbert-base-multilingual-cased',                                                                                       
-                             # 'roberta-large', 'xlm-roberta-large', 'xlm-roberta-base','ixa-ehu/ixambert-base-cased',
-                             ],
-                    'es':['PlanTL-GOB-ES/roberta-base-bne', 'dccuchile/bert-base-spanish-wwm-cased',  'bertin-project/bertin-roberta-base-spanish',
-                          'bert-base-multilingual-cased','distilbert-base-multilingual-cased', 'CenIA/distillbert-base-spanish-uncased',                            
-                          # 'ixa-ehu/ixambert-base-cased', 'xlm-roberta-large', 'xlm-roberta-base', 'PlanTL-GOB-ES/roberta-large-bne', 
+    language_models = {'es':['bertin-project/bertin-roberta-base-spanish', 'bert-base-multilingual-cased', 
+                             'distilbert-base-multilingual-cased', 'CenIA/distillbert-base-spanish-uncased',  
+                             'PlanTL-GOB-ES/roberta-base-bne',                          
+                          # 'ixa-ehu/ixambert-base-cased',  'dccuchile/bert-base-spanish-wwm-cased',  'PlanTL-GOB-ES/roberta-large-bne',,'xlm-roberta-large', 'xlm-roberta-base',
                         ],
+                        'en':['bert-base-cased', 'roberta-large', 
+                              'distilbert-base-uncased', 'xlm-roberta-base',  
+                              'bert-base-multilingual-cased',  'xlm-roberta-large', 
+                              'distilbert-base-multilingual-cased',                                                  
+                             # ,'ixa-ehu/ixambert-base-cased',[,'roberta-base',
+                             ],
+                    
             } 
     
     '''hparams_to_search = {
@@ -37,7 +41,7 @@ def main():
             odesia_benchmark(model=model, 
                              language=language, 
                              grid_search=hparams_to_search, 
-                             # datasets_to_eval=['multiconer_2022']
+                             datasets_to_eval=['exist_2022_t1', 'exist_2022_t2','mldoc_2018', 'sts_2017']
             )
             
             # calculamos el tiempo de esta ejecucion

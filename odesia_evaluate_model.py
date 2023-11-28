@@ -2,6 +2,7 @@ import copy
 from datetime import timedelta
 import itertools
 import json
+from generate_csv import generate_csv_from_report
 from odesia_classification import OdesiaTextClassification, OdesiaTokenClassification
 from odesia_qa import OdesiaQuestionAnswering
 from odesia_sentence_similarity import OdesiaSentenceSimilarity
@@ -13,6 +14,7 @@ import shutil
 import os
 from transformers import logging
 import warnings
+import pandas as pd
 
 # Suprimir todas las advertencias de tipo UserWarning
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -27,13 +29,13 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
     datasets_len = len(datasets_to_eval) if datasets_to_eval else len(DATASETS)
     total_trainings = datasets_len * len(grid) 
     current_iterations = 0
+    
 
     # recorremos todos los datasets de ODESIA
     for task in DATASETS:
         dataset_name = task['name']        
         dataset_config = task['dataset_config']
         dataset_path = compose_dataset_path(dataset_name, language)
-        
 
         # si el dataset está en los elegidos por el usuario
         if not datasets_to_eval or dataset_name in datasets_to_eval:
@@ -47,6 +49,12 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
                 model_config = copy.copy(GENERIC_MODEL_CONFIG)
                 model_config['output_dir'] = compose_output_dir(dataset_name, model, hparams, language)                
                 create_directories(model_config['output_dir'])
+
+                # si ya tenemos este modelo entrenado, pasamos
+                df_past_trainings = pd.read_csv(f'csvs/{dataset_name}_{language}.csv')
+                if model_config['output_dir'] in df_past_trainings['model_config.output_dir'].unique():
+                    print(f"############ Skipping model {model_config['output_dir']}, already trained.")
+                    continue
 
                 # añadimos los parametros del grid que vamos a estudiar
                 model_config['hf_parameters'].update(hparams)                 
@@ -103,6 +111,7 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
                 
                 # guardamos los datos de la ejecución por si necesitamos reanudarla en algún momento
                 append_model_to_history(model, model_config, dataset_name, language, iteration_time, evaluation_report)
+                generate_csv_from_report()
                 
                 # limpiamos el disco duro
                 purge_disk(path = '/'.join(model_config['output_dir'].split('/')[0:-1]), 

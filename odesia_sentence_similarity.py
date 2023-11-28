@@ -18,7 +18,7 @@ class OdesiaSentenceSimilarity(OdesiaHFModel):
                                                          self.max_score)#, batched=True, remove_columns=self.dataset["train"].column_names)
         # Step 3. Loading model, trainer and metrics     
         self.model = SentenceTransformer(model_path)
-        self.train_dataloader = DataLoader(self.tokenized_dataset['train'], shuffle=True, batch_size=model_config['hf_parameters']['per_device_train_batch_size'])
+        self.train_dataloader = DataLoader(self.tokenized_dataset['train'], shuffle=True, batch_size=self.model_config['hf_parameters']['per_device_train_batch_size'])
         self.train_loss = losses.CosineSimilarityLoss(model=self.model)
         self.evaluator = EmbeddingSimilarityEvaluator.from_input_examples(self.tokenized_dataset['val'])
         

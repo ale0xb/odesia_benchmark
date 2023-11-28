@@ -38,13 +38,13 @@ class OdesiaHFModel(OdesiaAbstractModel):
         super().__init__(model_path, dataset_path, model_config, dataset_config)
         
         # Basic configs
-        self.model_config = copy.copy(model_config)
-        self.dataset_config = copy.copy(dataset_config)
+        self.model_config = copy.deepcopy(model_config)
+        self.dataset_config = copy.deepcopy(dataset_config)
         self.model_path = model_path
         self.dataset_path = dataset_path        
-        self.output_dir = model_config['output_dir']
-        self.test_case = dataset_config['evall_test_case']
-        self.problem_type = dataset_config['problem_type']        
+        self.output_dir = self.model_config['output_dir']
+        self.test_case = self.dataset_config['evall_test_case']
+        self.problem_type = self.dataset_config['problem_type']        
         # Tokenizer
         
         
