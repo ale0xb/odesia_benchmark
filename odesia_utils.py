@@ -101,3 +101,16 @@ def rename_item_dataset(dataset_path, last_name, new_name):
             row[new_name] = row[last_name]
             del row[last_name]
         save_json(data=data, path=path)
+
+def rename_item_dataset_dipromats(dataset_path, last_name, new_name):
+    documents_in_folder = get_documents_in_folder(dataset_path)
+    for path in documents_in_folder:
+        data = json.load(open(path))
+        for row in data:
+            if row[last_name]:
+                row[last_name] = "propaganda"
+            else:
+                row[last_name] = "non-propaganda"
+            row[new_name] = row[last_name]
+            del row[last_name]
+        save_json(data=data, path=path) 

@@ -45,7 +45,7 @@ def main():
             odesia_benchmark(model=model, 
                              language=language, 
                              grid_search=hparams_to_search, 
-                             datasets_to_eval=['exist_2022_t1', 'exist_2022_t2','mldoc_2018', 'sts_2017']
+                             datasets_to_eval=['dipromats_2023_t1'] #, 'exist_2022_t2','mldoc_2018', 'sts_2017']
             )
             
             # calculamos el tiempo de esta ejecucion

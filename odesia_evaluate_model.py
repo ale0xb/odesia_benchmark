@@ -61,7 +61,7 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
                 
                 # inicializamos los modelos en función del tipo de problema del dataset
                 problem_type = task['dataset_config']['problem_type']            
-                if problem_type.find("text_classification") >-1:
+                if problem_type in ['single_label_classification', '', 'multi_class_classification', 'multi_label_classification']:
                     odesia_model = OdesiaTextClassification(model_path=model,
                                                             dataset_path=dataset_path,
                                                             model_config=model_config,

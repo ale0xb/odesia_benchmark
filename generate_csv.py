@@ -40,7 +40,7 @@ def generate_csv_from_report():
         file_name = f"csvs/{key}.csv"
         save_to_csv(value, file_name)
         df = pd.read_csv(file_name)
-        df = df.drop_duplicates(subset=['model_config.output_dir'])
+        df = df.drop_duplicates(subset=['model_config.output_dir'], keep="last")
         df.to_csv(file_name)
 
 

@@ -156,8 +156,8 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
         self.dataset = self.dataset.rename_column(dataset_config["label_column"], "label")
 
         if not self.tokenized_dataset:            
-            # para clasificación o multiclase
-            if self.problem_type != 'text_classification_multilabel':
+            # para clasificación multilabel
+            if self.problem_type != 'multi_label_classification':
                 self.dataset = self.dataset.cast_column('label', ClassLabel(names=self.label_list))
             self.tokenized_dataset = self.dataset.map(lambda ex: self.tokenizer(ex["text"], truncation=True, padding=True), batched=True)
             self.tokenized_dataset.save_to_disk(self.dataset_path_tokenized)
@@ -166,7 +166,7 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
         self.model = AutoModelForSequenceClassification.from_pretrained(
             model_path, 
             num_labels=self.num_labels, 
-            problem_type= 'multi_label_classification' if self.problem_type == 'text_classification_multilabel' else None
+            problem_type = 'multi_label_classification' if self.problem_type == 'multi_label_classification' else None
         )
 
         self.trainer = self.load_trainer(model=self.model, 
@@ -176,15 +176,16 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
 
     def compute_metrics(self, pred):
         labels = pred.label_ids
-        if self.num_labels <= 2:
-            predictions = pred.predictions.argmax(axis=1)
-        elif self.problem_type == 'text_classification_multiclass':
+
+        if self.problem_type == 'multi_class_classification':
             predictions = np.argmax(pred.predictions, axis = -1)
-        elif self.problem_type == 'text_classification_multilabel':
+        elif self.problem_type == 'multi_label_classification':
             predictions = (pred.predictions > 0.5).astype(int)
+
         f1_scores = f1_score(labels, predictions, average=None).tolist()
         f1_macro =  f1_score(labels, predictions, average="macro").tolist()
         accuracy = accuracy_score(labels, predictions)
+
         return {"accuracy":accuracy, "f1_macro" : f1_macro,"f1_per_class": {label_f1:f1_value for label_f1, f1_value in zip(self.label_list, f1_scores)}}
 
     def predict(self, split="test"):
@@ -192,15 +193,13 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
         dataset = self.tokenized_dataset[split]
         pred = self.trainer.predict(dataset)
 
-        if self.num_labels <= 2:
-            predictions = pred.predictions.argmax(axis=1)
-        elif self.problem_type == 'text_classification_multiclass':
+        if self.problem_type == 'multi_class_classification':
             predictions = np.argmax(pred.predictions, axis = -1)
-        elif self.problem_type == 'text_classification_multilabel':
+        elif self.problem_type == 'multi_label_classification':
             predictions = (pred.predictions > 0.5).astype(int)
         
         for i,prediction in enumerate(predictions):
-            if self.problem_type == 'text_classification_multiclass':
+            if self.problem_type == 'multi_class_classification':
                 predicted_labels = self.id2label[int(prediction)]
             else:
                 predicted_labels = []
