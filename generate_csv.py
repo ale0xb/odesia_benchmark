@@ -10,7 +10,7 @@ def flatten_json(json_data):
 
 def save_to_csv(data, file_name):
     with open(file_name, mode='w', newline='', encoding='utf-8') as file:
-        writer = csv.DictWriter(file, fieldnames=data[0].keys())
+        writer = csv.DictWriter(file, fieldnames=list(data[0].keys())+['model_config.hf_parameters.gradient_accumulation_steps', 'evaluation.val.eval_f1_per_class.non-propaganda', 'evaluation.test.eval_f1_per_class.non-propaganda', 'evaluation.test.eval_f1_per_class.propaganda', 'evaluation.val.eval_f1_per_class.propaganda'])
         writer.writeheader()
         writer.writerows(data)
 

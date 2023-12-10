@@ -52,8 +52,28 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
 
                 # si ya tenemos este modelo entrenado, pasamos
                 df_past_trainings = pd.read_csv(f'csvs/{dataset_name}_{language}.csv')
-                if model_config['output_dir'] in df_past_trainings['model_config.output_dir'].unique():
-                    print(f"############ Skipping model {model_config['output_dir']}, already trained.")
+                '''
+                Este fragmento habrá que borrarlo en la versión final, o hacerlo de otra manera.
+                Si el modelo es grande y hay que hacer una acumulación de gradiente, 
+                hay que hallar si se ha entrenado un modelo equivalente de tal manera que no se entrene dos veces.
+                '''
+                list_grid_models = df_past_trainings['model_config.output_dir'].unique()
+                dict_equivalences = {32: ['per_device_train_batch_size_8_gradient_accumulation_steps_4', 'per_device_train_batch_size_4_gradient_accumulation_steps_8', 'per_device_train_batch_size_32'],
+                                     16: ['per_device_train_batch_size_8_gradient_accumulation_steps_2', 'per_device_train_batch_size_4_gradient_accumulation_steps_4', 'per_device_train_batch_size_16']}
+                already_trained = False
+                if hparams.get('gradient_accumulation_steps') != None:
+                    total_batch_size = hparams['gradient_accumulation_steps'] * hparams['per_device_train_batch_size']
+                    for elemento in dict_equivalences[total_batch_size]:
+                        elemento = '/'.join(model_config['output_dir'].split("/")[:-1]) + f"/_{elemento}_learning_rate_{hparams['learning_rate']}_weight_decay_{hparams['weight_decay']}"
+                        if elemento in list_grid_models:
+                            print("<<<>>>> It was already trained in other configuration.", elemento)
+                            already_trained = True
+                            
+                if already_trained:
+                    continue
+
+                if model_config['output_dir'] in list_grid_models:
+                    print(f">>>>>>>>> Already trained. Skipping model {model_config['output_dir']}.")
                     continue
 
                 # añadimos los parametros del grid que vamos a estudiar
@@ -83,13 +103,13 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
                                                             model_config=model_config,
                                                             dataset_config=dataset_config)
                 
-                print(">>>> Training...")                
+                print(f"[{datetime.datetime.now()}] >>>> Training...")                
                 odesia_model.train()
 
-                print(">>>> Evaluation...")
+                print(f"[{datetime.datetime.now()}] >>>> Evaluation...", datetime.datetime.now())
                 evaluation_report = save_evaluation_report(odesia_model)
 
-                print(">>>> Prediction...")                
+                print(f"[{datetime.datetime.now()}] >>>> Prediction...", datetime.datetime.now())                
                 save_predictions(odesia_model)
 
                 # quitamos de la memoria de la gpu el modelo

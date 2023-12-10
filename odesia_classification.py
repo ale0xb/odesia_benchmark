@@ -149,14 +149,15 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
         self.data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)        
 
         # Step 2. Tokenized the dataset
-        column_names = (self.dataset['train'].column_names)
+
+        # renaming the column label
+        column_names = self.dataset['train'].column_names
         if 'label' in column_names and dataset_config["label_column"].strip() != 'label':
-            self.dataset = self.dataset.rename_column('label', "label_old")
-        
+            self.dataset = self.dataset.rename_column('label', "label_old")        
         self.dataset = self.dataset.rename_column(dataset_config["label_column"], "label")
 
         if not self.tokenized_dataset:            
-            # para clasificación multilabel
+            # para clasificación multiclase o binaria
             if self.problem_type != 'multi_label_classification':
                 self.dataset = self.dataset.cast_column('label', ClassLabel(names=self.label_list))
             self.tokenized_dataset = self.dataset.map(lambda ex: self.tokenizer(ex["text"], truncation=True, padding=True), batched=True)

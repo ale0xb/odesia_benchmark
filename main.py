@@ -1,3 +1,4 @@
+import copy
 import os
 import time
 #os.environ["CUDA_VISIBLE_DEVICES"] = '1'
@@ -5,20 +6,19 @@ from odesia_evaluate_model import odesia_benchmark
 
 
 def main():
-    # big models 
-    big_language_models = {'es':['PlanTL-GOB-ES/roberta-large-bne','xlm-roberta-large', 'xlm-roberta-base',],
-                        'en':['roberta-large', 'xlm-roberta-base', 'xlm-roberta-large',],
-                    
-            } 
+
+    LARGE = ['PlanTL-GOB-ES/roberta-large-bne', 'xlm-roberta-large', 'xlm-roberta-base', 'roberta-large', 'bert-base-multilingual-cased','bert-base-cased',]
     
-    # small models
-    language_models = {'es':['bertin-project/bertin-roberta-base-spanish', 'bert-base-multilingual-cased', 
+    language_models = {'es':['PlanTL-GOB-ES/roberta-base-bne','PlanTL-GOB-ES/roberta-large-bne','bertin-project/bertin-roberta-base-spanish',  
                              'distilbert-base-multilingual-cased', 'CenIA/distillbert-base-spanish-uncased',  
-                             'PlanTL-GOB-ES/roberta-base-bne', 'dccuchile/bert-base-spanish-wwm-cased', 'ixa-ehu/ixambert-base-cased',                        
+                              'dccuchile/bert-base-spanish-wwm-cased', 'bert-base-multilingual-cased', 
+                              # 'ixa-ehu/ixambert-base-cased',  'xlm-roberta-large',
+                              'xlm-roberta-base',                      
                         ],
-                        'en':['bert-base-cased', 'distilbert-base-uncased', 
-                              'bert-base-multilingual-cased', 'distilbert-base-multilingual-cased', 
-                              'ixa-ehu/ixambert-base-cased'                                                 
+                        'en':['roberta-base', 'roberta-large',  'distilbert-base-uncased', 
+                               'distilbert-base-multilingual-cased', 'bert-base-cased', 'bert-base-multilingual-cased',
+                              #'ixa-ehu/ixambert-base-cased',  'xlm-roberta-large', 
+                              'xlm-roberta-base',                                                
                              ],
                     
             }
@@ -29,25 +29,41 @@ def main():
             'learning_rate': [0.00001, 0.00003, 0.00005],
             'weight_decay': [0.1, 0.01]
         }'''
-    hparams_to_search = {
+    hparams_to_search_small = {
             'per_device_train_batch_size' : [32, 16],
             'learning_rate': [0.00001, 0.00003, 0.00005],
             'weight_decay': [0.1, 0.01]
         }
+    
+    hparams_to_search_large = {
+            'per_device_train_batch_size' : [8],
+            'gradient_accumulation_steps' : [4, 2],
+            'learning_rate': [0.00001, 0.00003, 0.00005],
+            'weight_decay': [0.1, 0.01]
+        }
+    
     total_iterations = len(language_models['es'])+len(language_models['en'])
     current_iterations = 0
     for language in language_models:
         
         for model in language_models[language]:
             
+            
+
             start_time = time.time()
+
+            if model in LARGE:
+                hparams_to_search = copy.deepcopy(hparams_to_search_large)
+            else:
+                hparams_to_search = copy.deepcopy(hparams_to_search_small)
             
             odesia_benchmark(model=model, 
                              language=language, 
                              grid_search=hparams_to_search, 
-                             datasets_to_eval=['dipromats_2023_t1'] #, 'exist_2022_t2','mldoc_2018', 'sts_2017']
+                             datasets_to_eval=['sqad_2022_squad_2016']
             )
-            
+                        
+
             # calculamos el tiempo de esta ejecucion
             iteration_time = time.time() - start_time
 

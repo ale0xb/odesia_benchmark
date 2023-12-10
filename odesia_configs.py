@@ -13,7 +13,7 @@ DATASETS = [{'name' : 'dipromats_2023_t1',
              'dataset_config':{
                                 "evall_test_case":"DIPROMATS2023",
                                 'main_metric': 'eval_f1_macro',
-                                'problem_type':'multi_class_classification',
+                                'problem_type':'multi_label_classification',
                                 "label2id":{"1 appeal to commonality": 0,
                                             "2 discrediting the opponent": 1,
                                             "3 loaded language": 2,

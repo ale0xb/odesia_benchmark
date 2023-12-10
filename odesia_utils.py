@@ -3,8 +3,9 @@ from itertools import product
 import jsbeautifier
 import json
 import glob
-
+import pandas as pd
 import numpy as np
+
 def create_directories(path):
     try:
         # Create all directories in the path
@@ -114,3 +115,4 @@ def rename_item_dataset_dipromats(dataset_path, last_name, new_name):
             row[new_name] = row[last_name]
             del row[last_name]
         save_json(data=data, path=path) 
+

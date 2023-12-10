@@ -85,7 +85,7 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
         if split in self.predictions:
             results_prediction = self.predictions[split]
         else:
-            results_prediction = self.predict(split=split, num_examples= 3000, return_references=True)
+            results_prediction = self.predict(split=split, num_examples = 3000, return_references=True)
         predictions = []
         # eliminamos todo de las predicciones, menos las claves que nos hacen falta
         for prediction in results_prediction['predictions']:
@@ -96,8 +96,8 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
         return results
     
     def predict(self, split="test", num_examples = "max", return_references=False):
-        
-        num_examples = len(self.dataset[split]) if num_examples == "max" else num_examples        
+        len_num_example = len(self.dataset[split])
+        num_examples = len_num_example if num_examples == "max" or num_examples > len_num_example else num_examples        
         predictions_dataset = self.dataset[split].select(range(num_examples))
         
         question_answerer = pipeline("question-answering", model=self.model.to(torch.device("cpu")), tokenizer=self.tokenizer)
