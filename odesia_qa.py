@@ -85,7 +85,7 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
         if split in self.predictions:
             results_prediction = self.predictions[split]
         else:
-            results_prediction = self.predict(split=split, num_examples = 3000, return_references=True)
+            results_prediction = self.predict(split=split, num_examples = 500, return_references=True)
         predictions = []
         # eliminamos todo de las predicciones, menos las claves que nos hacen falta
         for prediction in results_prediction['predictions']:

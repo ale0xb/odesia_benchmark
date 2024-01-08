@@ -9,17 +9,18 @@ def main():
 
     LARGE = ['PlanTL-GOB-ES/roberta-large-bne', 'xlm-roberta-large', 'xlm-roberta-base', 'roberta-large', 'bert-base-multilingual-cased','bert-base-cased',]
     
-    language_models = {'es':['PlanTL-GOB-ES/roberta-base-bne','PlanTL-GOB-ES/roberta-large-bne','bertin-project/bertin-roberta-base-spanish',  
+    language_models = {'en':[ 'distilbert-base-uncased', 'roberta-base', 'roberta-large', 
+                               'distilbert-base-multilingual-cased', 'bert-base-cased', 'bert-base-multilingual-cased',
+                              #'ixa-ehu/ixambert-base-cased',  'xlm-roberta-large', 
+                              'xlm-roberta-base',                                                
+                             ],
+                             'es':['PlanTL-GOB-ES/roberta-base-bne','PlanTL-GOB-ES/roberta-large-bne','bertin-project/bertin-roberta-base-spanish',  
                              'distilbert-base-multilingual-cased', 'CenIA/distillbert-base-spanish-uncased',  
                               'dccuchile/bert-base-spanish-wwm-cased', 'bert-base-multilingual-cased', 
                               # 'ixa-ehu/ixambert-base-cased',  'xlm-roberta-large',
                               'xlm-roberta-base',                      
                         ],
-                        'en':['roberta-base', 'roberta-large',  'distilbert-base-uncased', 
-                               'distilbert-base-multilingual-cased', 'bert-base-cased', 'bert-base-multilingual-cased',
-                              #'ixa-ehu/ixambert-base-cased',  'xlm-roberta-large', 
-                              'xlm-roberta-base',                                                
-                             ],
+                        
                     
             }
 
@@ -29,13 +30,20 @@ def main():
             'learning_rate': [0.00001, 0.00003, 0.00005],
             'weight_decay': [0.1, 0.01]
         }'''
-    hparams_to_search_small = {
+    '''hparams_to_search_small = {
             'per_device_train_batch_size' : [32, 16],
             'learning_rate': [0.00001, 0.00003, 0.00005],
             'weight_decay': [0.1, 0.01]
-        }
+        }'''
     
     hparams_to_search_large = {
+            'per_device_train_batch_size' : [8],
+            'gradient_accumulation_steps' : [4, 2],
+            'learning_rate': [0.00001, 0.00003, 0.00005],
+            'weight_decay': [0.1, 0.01]
+        }
+
+    hparams_to_search_small = {
             'per_device_train_batch_size' : [8],
             'gradient_accumulation_steps' : [4, 2],
             'learning_rate': [0.00001, 0.00003, 0.00005],
@@ -60,7 +68,7 @@ def main():
             odesia_benchmark(model=model, 
                              language=language, 
                              grid_search=hparams_to_search, 
-                             datasets_to_eval=['sqad_2022_squad_2016']
+                             datasets_to_eval=['multiconer_2022']
             )
                         
 

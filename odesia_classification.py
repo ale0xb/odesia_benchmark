@@ -100,6 +100,28 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
         }
     
     def predict(self, split="test"):
+        results = []
+        p = self.trainer.predict(self.tokenized_dataset[split])
+        predictions, labels = p.predictions, p.label_ids
+        predictions = np.argmax(predictions, axis=2)
+
+        true_predictions = [
+            [self.label_list[p] for (p, l) in zip(prediction, label) if l != -100]
+            for prediction, label in zip(predictions, labels)
+        ]
+      
+
+        for input, true_prediction in zip(self.dataset[split], true_predictions): 
+            if not true_prediction:
+                true_prediction = [""]
+            result = {"test_case": self.test_case,
+                            "id": input["id"],
+                            "ner_tags": list(true_prediction)}
+            
+            results.append(result)
+        return results
+    
+    def predict_evall_format(self, split="test"):
         inputs = self.dataset[split]
         classifier = pipeline("ner", model=self.model.to('cpu'), tokenizer=self.tokenizer)
        
