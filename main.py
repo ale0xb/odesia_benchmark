@@ -24,17 +24,11 @@ def main():
                     
             }
 
-    '''hparams_to_search = {
-            'per_device_train_batch_size' : [8],
-            'gradient_accumulation_steps' : [4, 2],
-            'learning_rate': [0.00001, 0.00003, 0.00005],
-            'weight_decay': [0.1, 0.01]
-        }'''
-    '''hparams_to_search_small = {
+    hparams_to_search_small = {
             'per_device_train_batch_size' : [32, 16],
             'learning_rate': [0.00001, 0.00003, 0.00005],
             'weight_decay': [0.1, 0.01]
-        }'''
+        }
     
     hparams_to_search_large = {
             'per_device_train_batch_size' : [8],
@@ -42,21 +36,12 @@ def main():
             'learning_rate': [0.00001, 0.00003, 0.00005],
             'weight_decay': [0.1, 0.01]
         }
-
-    hparams_to_search_small = {
-            'per_device_train_batch_size' : [8],
-            'gradient_accumulation_steps' : [4, 2],
-            'learning_rate': [0.00001, 0.00003, 0.00005],
-            'weight_decay': [0.1, 0.01]
-        }
     
-    total_iterations = len(language_models['es'])+len(language_models['en'])
+    total_iterations = len(language_models['es']) + len(language_models['en'])
     current_iterations = 0
     for language in language_models:
         
-        for model in language_models[language]:
-            
-            
+        for model in language_models[language]:                        
 
             start_time = time.time()
 
@@ -68,7 +53,7 @@ def main():
             odesia_benchmark(model=model, 
                              language=language, 
                              grid_search=hparams_to_search, 
-                             datasets_to_eval=['multiconer_2022']
+                             datasets_to_eval=['diann_2023']
             )
                         
 
@@ -89,7 +74,5 @@ def main():
             print("##############################")
             
                 
-    
-    
 if __name__ == "__main__":
     main()

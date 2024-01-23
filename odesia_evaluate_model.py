@@ -49,32 +49,34 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
                 model_config = copy.copy(GENERIC_MODEL_CONFIG)
                 model_config['output_dir'] = compose_output_dir(dataset_name, model, hparams, language)                
                 create_directories(model_config['output_dir'])
+                
+                csv_file_past_trainings = f'csvs/{dataset_name}_{language}.csv'                
+                if os.path.isfile(path=csv_file_past_trainings):
+                    # si ya tenemos este modelo entrenado, pasamos
+                    df_past_trainings = pd.read_csv(csv_file_past_trainings)                
+                    '''
+                    Este fragmento habrá que borrarlo en la versión final, o hacerlo de otra manera.
+                    Si el modelo es grande y hay que hacer una acumulación de gradiente, 
+                    hay que hallar si se ha entrenado un modelo equivalente de tal manera que no se entrene dos veces.
+                    '''
+                    list_grid_models = df_past_trainings['model_config.output_dir'].unique()
+                    dict_equivalences = {32: ['per_device_train_batch_size_8_gradient_accumulation_steps_4', 'per_device_train_batch_size_4_gradient_accumulation_steps_8', 'per_device_train_batch_size_32'],
+                                        16: ['per_device_train_batch_size_8_gradient_accumulation_steps_2', 'per_device_train_batch_size_4_gradient_accumulation_steps_4', 'per_device_train_batch_size_16']}
+                    already_trained = False
+                    if hparams.get('gradient_accumulation_steps') != None:
+                        total_batch_size = hparams['gradient_accumulation_steps'] * hparams['per_device_train_batch_size']
+                        for elemento in dict_equivalences[total_batch_size]:
+                            elemento = '/'.join(model_config['output_dir'].split("/")[:-1]) + f"/_{elemento}_learning_rate_{hparams['learning_rate']}_weight_decay_{hparams['weight_decay']}"
+                            if elemento in list_grid_models:
+                                print("<<<>>>> It was already trained in other configuration.", elemento)
+                                already_trained = True
+                                
+                    if already_trained:
+                        continue
 
-                # si ya tenemos este modelo entrenado, pasamos
-                df_past_trainings = pd.read_csv(f'csvs/{dataset_name}_{language}.csv')
-                '''
-                Este fragmento habrá que borrarlo en la versión final, o hacerlo de otra manera.
-                Si el modelo es grande y hay que hacer una acumulación de gradiente, 
-                hay que hallar si se ha entrenado un modelo equivalente de tal manera que no se entrene dos veces.
-                '''
-                list_grid_models = df_past_trainings['model_config.output_dir'].unique()
-                dict_equivalences = {32: ['per_device_train_batch_size_8_gradient_accumulation_steps_4', 'per_device_train_batch_size_4_gradient_accumulation_steps_8', 'per_device_train_batch_size_32'],
-                                     16: ['per_device_train_batch_size_8_gradient_accumulation_steps_2', 'per_device_train_batch_size_4_gradient_accumulation_steps_4', 'per_device_train_batch_size_16']}
-                already_trained = False
-                if hparams.get('gradient_accumulation_steps') != None:
-                    total_batch_size = hparams['gradient_accumulation_steps'] * hparams['per_device_train_batch_size']
-                    for elemento in dict_equivalences[total_batch_size]:
-                        elemento = '/'.join(model_config['output_dir'].split("/")[:-1]) + f"/_{elemento}_learning_rate_{hparams['learning_rate']}_weight_decay_{hparams['weight_decay']}"
-                        if elemento in list_grid_models:
-                            print("<<<>>>> It was already trained in other configuration.", elemento)
-                            already_trained = True
-                            
-                if already_trained:
-                    continue
-
-                if model_config['output_dir'] in list_grid_models:
-                    print(f">>>>>>>>> Already trained. Skipping model {model_config['output_dir']}.")
-                    continue
+                    if model_config['output_dir'] in list_grid_models:
+                        print(f">>>>>>>>> Already trained. Skipping model {model_config['output_dir']}.")
+                        continue
 
                 # añadimos los parametros del grid que vamos a estudiar
                 model_config['hf_parameters'].update(hparams)                 

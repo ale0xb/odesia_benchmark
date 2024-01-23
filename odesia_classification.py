@@ -1,8 +1,7 @@
 import os
 import numpy as np
 
-from datasets import load_dataset, load_from_disk, ClassLabel
-import torch
+from datasets import ClassLabel
 
 from transformers import AutoModelForTokenClassification, DataCollatorForTokenClassification
 from transformers import AutoModelForSequenceClassification, DataCollatorWithPadding
@@ -51,7 +50,7 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
         
 
         
-    def tokenize_and_align_labels(self, examples):
+    def tokenize_and_align_labels_bugeada(self, examples):
         tokenized_inputs = self.tokenizer(examples["tokens"], 
                                           is_split_into_words=True, 
                                           padding='max_length', 
@@ -78,6 +77,37 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
 
         return tokenized_inputs
     
+    def tokenize_and_align_labels(self, examples, label_all_tokens=True):
+        texts = examples["tokens"]  
+        tags = examples["ner_tags"] 
+        tokenized_inputs = self.tokenizer(texts,
+                                    is_split_into_words=True,
+                                    # return_offsets_mapping=True,
+                                    padding=True, truncation=True)
+        if tags is not None:
+            raw_labels = [[self.label2id[tag] for tag in doc] for doc in tags]
+            labels = []
+            for i, raw_label in enumerate(raw_labels):
+                word_ids = tokenized_inputs.word_ids(batch_index=i)
+                previous_word_idx = None
+                label = []
+                for word_idx in word_ids:
+                    # Special tokens have a word id that is None. We set the label to -100 so they are automatically
+                    # ignored in the loss function.
+                    if word_idx is None:
+                        label.append(-100)
+                    # We set the label for the first token of each word.
+                    elif word_idx != previous_word_idx:
+                        label.append(raw_label[word_idx])
+                    # For the other tokens in a word, we set the label to either the current label or -100, depending on
+                    # the label_all_tokens flag.
+                    else:
+                        label.append(raw_label[word_idx] if label_all_tokens else -100)
+                    previous_word_idx = word_idx
+                labels.append(label)
+            tokenized_inputs["labels"] = labels
+        return tokenized_inputs
+    
     def compute_metrics(self, p):
         predictions, labels = p
         predictions = np.argmax(predictions, axis=2)
@@ -101,13 +131,16 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
     
     def predict(self, split="test"):
         results = []
-        p = self.trainer.predict(self.tokenized_dataset[split])
+        input_ner = self.tokenized_dataset[split].select(range(30))
+        print(input_ner[0])
+        p = self.trainer.predict(input_ner)
+
         predictions, labels = p.predictions, p.label_ids
         predictions = np.argmax(predictions, axis=2)
 
         true_predictions = [
-            [self.label_list[p] for (p, l) in zip(prediction, label) if l != -100]
-            for prediction, label in zip(predictions, labels)
+            [self.label_list[p] for p in prediction]
+            for prediction in predictions
         ]
       
 
@@ -119,10 +152,10 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
                             "ner_tags": list(true_prediction)}
             
             results.append(result)
-        return results
+        return true_predictions
     
     def predict_evall_format(self, split="test"):
-        inputs = self.dataset[split]
+        inputs = self.dataset[split].select(range(30))
         classifier = pipeline("ner", model=self.model.to('cpu'), tokenizer=self.tokenizer)
        
         results = []
@@ -155,11 +188,15 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
 
                 result = {"test_case": self.test_case,
                         "id":input["id"],
+                        "classifier_output": classifier_outputs,
+                        "gold_ner_tags" : input["ner_tags"],
+                        "gold_tokens" : input['tokens'],
                         "ner_tags":ner_tags, 
                         "ner_tags_index":ner_tags_index}
                                                
                 results.append(result)   
         return {split:results}
+    
     
     
 class OdesiaTextClassification(OdesiaUniversalClassification):
@@ -209,7 +246,9 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
         f1_macro =  f1_score(labels, predictions, average="macro").tolist()
         accuracy = accuracy_score(labels, predictions)
 
-        return {"accuracy":accuracy, "f1_macro" : f1_macro,"f1_per_class": {label_f1:f1_value for label_f1, f1_value in zip(self.label_list, f1_scores)}}
+        return {"accuracy":accuracy, 
+                "f1_macro" : f1_macro,
+                "f1_per_class": {label_f1:f1_value for label_f1, f1_value in zip(self.label_list, f1_scores)}}
 
     def predict(self, split="test"):
         results = []
