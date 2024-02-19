@@ -1,0 +1,6 @@
+datasets
+trained_models
+csvs
+__pycache__
+.ipynb_checkpoints
+__MACOSX
