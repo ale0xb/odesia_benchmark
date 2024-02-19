@@ -4,3 +4,4 @@ csvs
 __pycache__
 .ipynb_checkpoints
 __MACOSX
+report.json
