@@ -7,6 +7,16 @@ from odesia_evaluate_model import odesia_benchmark
 
 def main():
 
+    # Ensure csv folder exists
+    if not os.path.exists('csvs'):
+        os.makedirs('csvs')
+
+    # Ensure report.json exists. If not, create it with an empty list
+    if not os.path.exists('./report.json'):
+        with open('report.json', 'w') as f:
+            f.write('[]')
+    
+    
     LARGE = ['PlanTL-GOB-ES/roberta-large-bne', 'xlm-roberta-large', 'xlm-roberta-base', 'roberta-large', 'bert-base-multilingual-cased','bert-base-cased',]
     
     language_models = {'en':[ 'distilbert-base-uncased', 'roberta-base', 'roberta-large', 
