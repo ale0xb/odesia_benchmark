@@ -19,16 +19,18 @@ def main():
     
     LARGE = ['PlanTL-GOB-ES/roberta-large-bne', 'xlm-roberta-large', 'xlm-roberta-base', 'roberta-large', 'bert-base-multilingual-cased','bert-base-cased',]
     
-    language_models = {'en':[ 'distilbert-base-uncased', 'roberta-base', 'roberta-large', 
-                               'distilbert-base-multilingual-cased', 'bert-base-cased', 'bert-base-multilingual-cased',
+    language_models = {'en':[ # 'distilbert-base-uncased', 'roberta-base', 'roberta-large', 
+                               'distilbert-base-multilingual-cased', 
+                               #'bert-base-cased', 'bert-base-multilingual-cased',
                               #'ixa-ehu/ixambert-base-cased',  'xlm-roberta-large', 
-                              'xlm-roberta-base',                                                
+                              # 'xlm-roberta-base',                                                
                              ],
-                             'es':['PlanTL-GOB-ES/roberta-base-bne','PlanTL-GOB-ES/roberta-large-bne','bertin-project/bertin-roberta-base-spanish',  
-                             'distilbert-base-multilingual-cased', 'CenIA/distillbert-base-spanish-uncased',  
-                              'dccuchile/bert-base-spanish-wwm-cased', 'bert-base-multilingual-cased', 
+                             'es':[
+                                 #'PlanTL-GOB-ES/roberta-base-bne','PlanTL-GOB-ES/roberta-large-bne','bertin-project/bertin-roberta-base-spanish',  
+                             'distilbert-base-multilingual-cased', #'CenIA/distillbert-base-spanish-uncased',  
+                              #'dccuchile/bert-base-spanish-wwm-cased', 'bert-base-multilingual-cased', 
                               # 'ixa-ehu/ixambert-base-cased',  'xlm-roberta-large',
-                              'xlm-roberta-base',                      
+                              #'xlm-roberta-base',                      
                         ],
                         
                     
@@ -63,9 +65,11 @@ def main():
             odesia_benchmark(model=model, 
                              language=language, 
                              grid_search=hparams_to_search, 
-                             datasets_to_eval=['diann_2023']
+                             datasets_to_eval=['diann_2023', 
+                                               'exist_2022_t1', 
+                                               'exist_2022_t2']
             )
-                        
+                      
 
             # calculamos el tiempo de esta ejecucion
             iteration_time = time.time() - start_time
