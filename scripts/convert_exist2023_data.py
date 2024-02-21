@@ -90,8 +90,11 @@ def save_data_to_json(split_data, output_folder):
                 task_data = lang_data[task_columns]
                 task_data = task_data.rename(columns={col: col.replace(f'task{task}_', '') for col in task_columns})
                 task_data = task_data.rename(columns={'id_EXIST': 'id', 'tweet': 'text'})
-                output_file_path = task_output_folder / f'{split}_{lang}.json' 
-                task_data.to_json(output_file_path, orient='records', lines=True, force_ascii=False, indent=4)
+                output_file_path = task_output_folder / f'{split}_{lang}.json'
+                if split == 'dev':
+                    output_file_path = output_file_path.with_name(output_file_path.name.replace('dev', 'val'))
+                task_data['test_case'] = 'EXIST2023'
+                task_data.to_json(output_file_path, orient='records', force_ascii=False, indent=4)
 
 def main():
     args = parse_arguments()
