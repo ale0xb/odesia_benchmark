@@ -65,9 +65,7 @@ def main():
             odesia_benchmark(model=model, 
                              language=language, 
                              grid_search=hparams_to_search, 
-                             datasets_to_eval=['diann_2023', 
-                                               'exist_2022_t1', 
-                                               'exist_2022_t2']
+                             datasets_to_eval=['exist_2023_t1']
             )
                       
 
