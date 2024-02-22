@@ -68,9 +68,17 @@ DATASETS = [{'name' : 'dipromats_2023_t1',
                                             'objectification': 5},
                                 "label_column":"label_text",
                                 }
-             },
-            
-            {'name':'mldoc_2018',              
+             }
+             ,{'name':'exist_2023_t1',              
+             'dataset_config':{"evall_test_case":"EXIST2023",
+                               'main_metric': 'eval_f1_macro',
+                               'problem_type':'multi_class_classification',
+                                "label2id":{'non-sexist':0,
+                                            'sexist':1},
+                                "label_column":"hard_label",                                
+                                }
+             }
+            ,{'name':'mldoc_2018',              
              'dataset_config':{"evall_test_case":"MLDOC",
                                'main_metric': 'eval_f1_macro',
                                'problem_type':'multi_class_classification',
