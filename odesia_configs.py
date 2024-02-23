@@ -75,10 +75,39 @@ DATASETS = [{'name' : 'dipromats_2023_t1',
                                'problem_type':'multi_class_classification',
                                 "label2id":{'non-sexist':0,
                                             'sexist':1},
-                                "label_column":"hard_label",                                
+                                "label_column":"hard_label_text",                                
                                 }
              }
-            ,{'name':'mldoc_2018',              
+            
+            ,{'name':'exist_2023_t2',              
+             'dataset_config':{"evall_test_case":"EXIST2023",
+                               'main_metric': 'eval_f1_macro',
+                               'problem_type':'multi_class_classification',
+                                "label2id":{'sexual-violence':0,
+                                            'stereotyping-dominance':1, 
+                                            'non-sexist':2,
+                                            'misogyny-non-sexual-violence':3,      
+                                            'ideological-inequality':4,             
+                                            'objectification': 5},
+                                "label_column":"label_text",
+                                }
+             }
+             ,{'name':'exist_2023_t3',              
+             'dataset_config':{"evall_test_case":"EXIST2023",
+                               'main_metric': 'eval_f1_macro',
+                               'problem_type':'multi_class_classification',
+                                "label2id":{'sexual-violence':0,
+                                            'stereotyping-dominance':1, 
+                                            'non-sexist':2,
+                                            'misogyny-non-sexual-violence':3,      
+                                            'ideological-inequality':4,             
+                                            'objectification': 5},
+                                "label_column":"label_text",
+                                }
+             },
+             
+            
+            {'name':'mldoc_2018',              
              'dataset_config':{"evall_test_case":"MLDOC",
                                'main_metric': 'eval_f1_macro',
                                'problem_type':'multi_class_classification',
