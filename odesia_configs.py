@@ -69,13 +69,13 @@ DATASETS = [{'name' : 'dipromats_2023_t1',
                                 "label_column":"label_text",
                                 }
              }
-             ,{'name':'exist_2023_t1',              
+             ,{'name':'exist_2023_t1_hard',              
              'dataset_config':{"evall_test_case":"EXIST2023",
                                'main_metric': 'eval_f1_macro',
                                'problem_type':'multi_class_classification',
                                 "label2id":{'non-sexist':0,
                                             'sexist':1},
-                                "label_column":"hard_label_text",                                
+                                "label_column":"label_text",                                
                                 }
              }
             
