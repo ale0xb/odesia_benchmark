@@ -83,6 +83,7 @@ def save_data_to_json(split_data, output_folder):
     for task in range(1, 4):
         task_output_folder = pl.Path(output_folder, f'exist_2023_t{task}')
         task_output_folder.mkdir(parents=True, exist_ok=True)
+            
         for split, data in split_data.items():
             for lang in ['en', 'es']:
                 lang_data = data[data['lang'] == lang]
@@ -90,6 +91,14 @@ def save_data_to_json(split_data, output_folder):
                 task_data = lang_data[task_columns]
                 task_data = task_data.rename(columns={col: col.replace(f'task{task}_', '') for col in task_columns})
                 task_data = task_data.rename(columns={'id_EXIST': 'id', 'tweet': 'text'})
+                if task == 1:
+                    # Convert hard_label from YES/NO to 0/1
+                    task_data['hard_label'] = task_data['hard_label'].map({'YES': 1, 'NO': 0})
+                    # Convert null values to -1
+                    task_data['hard_label'] = task_data['hard_label'].fillna(-1)
+                    # Cast hard_label to int
+                    task_data['hard_label'] = task_data['hard_label'].astype(int)
+                    task_data['hard_label_text'] = task_data['hard_label'].map({1: 'sexist', 0: 'non-sexist'})
                 output_file_path = task_output_folder / f'{split}_{lang}.json'
                 if split == 'dev':
                     output_file_path = output_file_path.with_name(output_file_path.name.replace('dev', 'val'))
