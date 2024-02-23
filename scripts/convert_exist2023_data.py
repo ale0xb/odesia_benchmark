@@ -100,7 +100,11 @@ def save_data_to_json(split_data, output_folder):
                                 task_data['hard_label'] = task_data['hard_label'].map({'YES': 1, 'NO': 0})
                                 # Cast hard_label to int
                                 task_data['hard_label'] = task_data['hard_label'].astype(int)
-                                task_data['hard_label_text'] = task_data['hard_label'].map({1: 'sexist', 0: 'non-sexist'})    
+                                task_data['hard_label_text'] = task_data['hard_label'].map({1: 'sexist', 0: 'non-sexist'})
+                                # Rename hard_label to label
+                                task_data = task_data.rename(columns={'hard_label': 'label'})
+                                # Rename hard_label_text to label_text
+                                task_data = task_data.rename(columns={'hard_label_text': 'label_text'})    
                             elif task == 2:
                                 # Convert hard_label from to 0/1
                                 task_data['hard_label'] = task_data['hard_label'].map({'DIRECT': 3, 
@@ -113,6 +117,10 @@ def save_data_to_json(split_data, output_folder):
                                                                                             2: 'reported',
                                                                                             1: 'judgemental',
                                                                                             0: 'non-sexist'})
+                                # Rename hard_label to label
+                                task_data = task_data.rename(columns={'hard_label': 'label'})
+                                # Rename hard_label_text to label_text
+                                task_data = task_data.rename(columns={'hard_label_text': 'label_text'})
                             elif task == 3:
                                 # Convert hard_label list to numbers
                                 mapping = {'SEXUAL-VIOLENCE': 0,
@@ -134,11 +142,26 @@ def save_data_to_json(split_data, output_folder):
                                                    4: 'ideological-inequality',
                                                    5: 'objectification'}
                                 
-                                task_data['hard_label_text'] = task_data['hard_label'].apply(convert_list, mapping=inverse_mapping)
-                            # Rename hard_label to label
-                            task_data = task_data.rename(columns={'hard_label': 'label'})
-                            # Rename hard_label_text to label_text
-                            task_data = task_data.rename(columns={'hard_label_text': 'label_text'})
+                                
+                                # Set the mask to 1 if the label is present
+                                def create_mask(lst):
+                                    mask = [0, 0, 0, 0, 0, 0]
+                                    for label in lst:
+                                        mask[label] = 1
+                                    return mask
+                                
+                                # Create a new column with the mask
+                                task_data['label_task3_hf'] = task_data['hard_label'].apply(create_mask)
+                                # Cast to float
+                                task_data['label_task3_hf'] = task_data['label_task3_hf'].apply(lambda x: [float(i) for i in x])
+
+                                def create_map_from_mask(mask):
+                                    return dict(zip([inverse_mapping[key] for key in sorted(inverse_mapping.keys())], mask))
+                                
+                                task_data['map_label_task3_hf'] = task_data['label_task3_hf'].apply(create_map_from_mask)
+
+                                # Rename hard_label to label
+                                task_data = task_data.rename(columns={'hard_label': 'label_task3'})    
                             
                         # TODO: Manage soft labels
                         output_file_path = task_output_folder / f'{split}_{lang}.json'

@@ -100,7 +100,7 @@ DATASETS = [{'name' : 'dipromats_2023_t1',
                                             'misogyny-non-sexual-violence':3,      
                                             'ideological-inequality':4,             
                                             'objectification': 5},
-                                "label_column":"label_text",
+                                "label_column":"label_task3_hf",
                                 }
              },
              
