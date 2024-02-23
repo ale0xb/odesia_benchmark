@@ -65,7 +65,9 @@ def main():
             odesia_benchmark(model=model, 
                              language=language, 
                              grid_search=hparams_to_search, 
-                             datasets_to_eval=['exist_2023_t1']
+                             datasets_to_eval=['exist_2023_t1_hard',
+                                               'exist_2023_t2_hard',
+                                               'exist_2023_t3_hard',]
             )
                       
 
