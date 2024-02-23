@@ -81,29 +81,71 @@ def save_data_to_json(split_data, output_folder):
         None
     """
     for task in range(1, 4):
-        task_output_folder = pl.Path(output_folder, f'exist_2023_t{task}')
-        task_output_folder.mkdir(parents=True, exist_ok=True)
-            
-        for split, data in split_data.items():
-            for lang in ['en', 'es']:
-                lang_data = data[data['lang'] == lang]
-                task_columns = [col for col in lang_data.columns if f'task{task}_' in col] + ['id_EXIST', 'tweet']
-                task_data = lang_data[task_columns]
-                task_data = task_data.rename(columns={col: col.replace(f'task{task}_', '') for col in task_columns})
-                task_data = task_data.rename(columns={'id_EXIST': 'id', 'tweet': 'text'})
-                if task == 1:
-                    # Convert hard_label from YES/NO to 0/1
-                    task_data['hard_label'] = task_data['hard_label'].map({'YES': 1, 'NO': 0})
-                    # Convert null values to -1
-                    task_data['hard_label'] = task_data['hard_label'].fillna(-1)
-                    # Cast hard_label to int
-                    task_data['hard_label'] = task_data['hard_label'].astype(int)
-                    task_data['hard_label_text'] = task_data['hard_label'].map({1: 'sexist', 0: 'non-sexist'})
-                output_file_path = task_output_folder / f'{split}_{lang}.json'
-                if split == 'dev':
-                    output_file_path = output_file_path.with_name(output_file_path.name.replace('dev', 'val'))
-                task_data['test_case'] = 'EXIST2023'
-                task_data.to_json(output_file_path, orient='records', force_ascii=False, indent=4)
+        for gold_type in ['hard', 'soft']:
+            task_output_folder = pl.Path(output_folder, f'exist_2023_t{task}_{gold_type}')
+            task_output_folder.mkdir(parents=True, exist_ok=True)    
+            for split, data in split_data.items():
+                    for lang in ['en', 'es']:
+                        lang_data = data[data['lang'] == lang]
+                        task_columns = [col for col in lang_data.columns if f'task{task}_' in col] + ['id_EXIST', 'tweet']
+                        task_data = lang_data[task_columns]
+                        task_data = task_data.rename(columns={col: col.replace(f'task{task}_', '') for col in task_columns})
+                        task_data = task_data.rename(columns={'id_EXIST': 'id', 'tweet': 'text'})
+                        if gold_type == 'hard':
+                            task_data = task_data.drop(columns=['soft_label'])
+                            # Drop null values
+                            task_data = task_data.dropna(subset=['hard_label'])
+                            if task == 1:    
+                                # Convert hard_label from YES/NO to 0/1
+                                task_data['hard_label'] = task_data['hard_label'].map({'YES': 1, 'NO': 0})
+                                # Cast hard_label to int
+                                task_data['hard_label'] = task_data['hard_label'].astype(int)
+                                task_data['hard_label_text'] = task_data['hard_label'].map({1: 'sexist', 0: 'non-sexist'})    
+                            elif task == 2:
+                                # Convert hard_label from to 0/1
+                                task_data['hard_label'] = task_data['hard_label'].map({'DIRECT': 3, 
+                                                                                       'REPORTED': 2, 
+                                                                                       'JUDGEMENTAL': 1, 
+                                                                                       'NO': 0})
+                                # Cast hard_label to int
+                                task_data['hard_label'] = task_data['hard_label'].astype(int)
+                                task_data['hard_label_text'] = task_data['hard_label'].map({3: 'direct',
+                                                                                            2: 'reported',
+                                                                                            1: 'judgemental',
+                                                                                            0: 'non-sexist'})
+                            elif task == 3:
+                                # Convert hard_label list to numbers
+                                mapping = {'SEXUAL-VIOLENCE': 0,
+                                             'STEREOTYPING-DOMINANCE': 1, 
+                                             'NO': 2,
+                                             'MISOGYNY-NON-SEXUAL-VIOLENCE': 3,      
+                                             'IDEOLOGICAL-INEQUALITY': 4,             
+                                             'OBJECTIFICATION': 5}
+                                
+                                def convert_list(lst, mapping):
+                                    return [mapping[l] for l in lst]
+                                
+                                task_data['hard_label'] = task_data['hard_label'].apply(convert_list, mapping=mapping)
+
+                                inverse_mapping = {0: 'sexual-violence',
+                                                   1: 'stereotyping-dominance',
+                                                   2: 'non-sexist',
+                                                   3: 'misogyny-non-sexual-violence',
+                                                   4: 'ideological-inequality',
+                                                   5: 'objectification'}
+                                
+                                task_data['hard_label_text'] = task_data['hard_label'].apply(convert_list, mapping=inverse_mapping)
+                            # Rename hard_label to label
+                            task_data = task_data.rename(columns={'hard_label': 'label'})
+                            # Rename hard_label_text to label_text
+                            task_data = task_data.rename(columns={'hard_label_text': 'label_text'})
+                            
+                        # TODO: Manage soft labels
+                        output_file_path = task_output_folder / f'{split}_{lang}.json'
+                        if split == 'dev':
+                            output_file_path = output_file_path.with_name(output_file_path.name.replace('dev', 'val'))
+                        task_data['test_case'] = 'EXIST2023'
+                        task_data.to_json(output_file_path, orient='records', force_ascii=False, indent=4)
 
 def main():
     args = parse_arguments()
