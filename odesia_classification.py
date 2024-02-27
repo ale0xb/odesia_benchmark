@@ -235,10 +235,13 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
                                          compute_metrics_function=self.compute_metrics)
 
     def convert_predictions(self, pred):
-        if self.problem_type == 'multi_class_classification':
+        if 'multi_class_classification' in self.problem_type:
             predictions = np.argmax(pred.predictions, axis=-1)
-        elif self.problem_type == 'multi_label_classification':
-            predictions = (pred.predictions > 0.5).astype(int)
+        elif 'multi_label_classification' in self.problem_type:
+            probs = 1 / (1 + np.exp(-pred.predictions))
+            predictions = (probs > 0.5).astype(int)
+        else:
+            raise ValueError(f"Problem type {self.problem_type} not supported")
         return predictions
 
     def compute_metrics(self, pred):
