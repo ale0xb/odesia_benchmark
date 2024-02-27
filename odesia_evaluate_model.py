@@ -3,7 +3,7 @@ from datetime import timedelta
 import itertools
 import json
 from generate_csv import generate_csv_from_report
-from odesia_classification import OdesiaTextClassification, OdesiaTokenClassification
+from odesia_classification import OdesiaTextClassification, OdesiaTokenClassification, OdesiaTextClassificationWithDisagreements
 from odesia_qa import OdesiaQuestionAnswering
 from odesia_sentence_similarity import OdesiaSentenceSimilarity
 from odesia_configs import DATASETS, GENERIC_MODEL_CONFIG
@@ -104,6 +104,13 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
                                                             dataset_path=dataset_path,
                                                             model_config=model_config,
                                                             dataset_config=dataset_config)
+                elif problem_type in ["multi_class_classification_disagreements", "multi_label_classification_disagreements"]:
+                    odesia_model = OdesiaTextClassificationWithDisagreements(model_path=model,
+                                                                            dataset_path=dataset_path,
+                                                                            model_config=model_config,
+                                                                            dataset_config=dataset_config)
+                else: 
+                    raise ValueError("Unknown problem type. Please check the dataset configuration.")
                 
                 print(f"[{datetime.datetime.now()}] >>>> Training...")                
                 odesia_model.train()

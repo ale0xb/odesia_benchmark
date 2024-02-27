@@ -19,15 +19,16 @@ def main():
     
     LARGE = ['PlanTL-GOB-ES/roberta-large-bne', 'xlm-roberta-large', 'xlm-roberta-base', 'roberta-large', 'bert-base-multilingual-cased','bert-base-cased',]
     
-    language_models = {'en':[ # 'distilbert-base-uncased', 'roberta-base', 'roberta-large', 
-                               'distilbert-base-multilingual-cased', 
+    language_models = {'en':[ 'distilbert-base-uncased', #'roberta-base', 'roberta-large', 
+                            #    'distilbert-base-multilingual-cased', 
                                #'bert-base-cased', 'bert-base-multilingual-cased',
                               #'ixa-ehu/ixambert-base-cased',  'xlm-roberta-large', 
                               # 'xlm-roberta-base',                                                
                              ],
                              'es':[
                                  #'PlanTL-GOB-ES/roberta-base-bne','PlanTL-GOB-ES/roberta-large-bne','bertin-project/bertin-roberta-base-spanish',  
-                             'distilbert-base-multilingual-cased', #'CenIA/distillbert-base-spanish-uncased',  
+                             # 'distilbert-base-multilingual-cased', 
+                             'CenIA/distillbert-base-spanish-uncased',  
                               #'dccuchile/bert-base-spanish-wwm-cased', 'bert-base-multilingual-cased', 
                               # 'ixa-ehu/ixambert-base-cased',  'xlm-roberta-large',
                               #'xlm-roberta-base',                      
@@ -65,9 +66,13 @@ def main():
             odesia_benchmark(model=model, 
                              language=language, 
                              grid_search=hparams_to_search, 
-                             datasets_to_eval=['exist_2023_t1_hard',
-                                               'exist_2023_t2_hard',
-                                               'exist_2023_t3_hard',]
+                             datasets_to_eval=[
+                                #  'dipromats_2023_t2',
+                                #  'dipromats_2023_t3',
+                                 'exist_2023_t1_hard',
+                                #  'exist_2023_t2_hard',
+                                #  'exist_2023_t3_hard',
+                            ]
             )
                       
 

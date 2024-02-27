@@ -12,6 +12,10 @@ from sklearn.metrics import f1_score, accuracy_score
 
 from odesia_core import OdesiaHFModel
 
+import pandas as pd
+
+from vendor.exist2023evaluation import ICM_Hard
+
 
 class OdesiaUniversalClassification(OdesiaHFModel):
     def __init__(self, model_path, dataset_path, model_config, dataset_config):
@@ -265,10 +269,13 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
         predictions = self.convert_predictions(pred)
 
         for i, prediction in enumerate(predictions):
-            if self.problem_type == 'multi_class_classification':
+            if 'multi_class_classification' in self.problem_type:
                 predicted_labels = self.id2label[int(prediction)]
-            else:
+            elif 'multi_label_classification' in self.problem_type:
                 predicted_labels = [self.id2label[j] for j, label_id in enumerate(prediction) if label_id == 1]
+            else:
+                raise ValueError(f"Problem type {self.problem_type} not supported")
+        
             result = {
                 'test_case': self.test_case,
                 'id': dataset[i]['id'],
@@ -277,3 +284,31 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
             results.append(result)
         return {split: results}
             
+class OdesiaTextClassificationWithDisagreements(OdesiaTextClassification):
+    
+    def __init__(self, model_path, dataset_path, model_config, dataset_config):                
+        super().__init__(model_path, dataset_path, model_config, dataset_config)
+        
+
+    def compute_metrics(self, pred):
+        base_metrics = super().compute_metrics(pred)
+        
+        labels = pred.label_ids
+        predictions = self.convert_predictions(pred)
+
+        # Convert to pandas dataframe 
+        predictions_df = pd.DataFrame(predictions, columns=['value'])
+        labels_df = pd.DataFrame(labels, columns=['value'])
+
+        # Create column 'id' for predictions_df and labels_df
+        predictions_df['id'] = predictions_df.index
+        labels_df['id'] = labels_df.index
+        
+        # Compute ICM_Hard (needs to be converted into pandas dataframe)
+        icm_hard =  ICM_Hard(predictions_df, labels_df, "task1", None)
+        icm_hard_result = icm_hard.evaluate()
+
+        ## Add results to base_metrics
+        base_metrics['icm_hard'] = icm_hard_result
+        return base_metrics
+
