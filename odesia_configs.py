@@ -71,7 +71,7 @@ DATASETS = [{'name' : 'dipromats_2023_t1',
              }
              ,{'name':'exist_2023_t1_hard',              
              'dataset_config':{"evall_test_case":"EXIST2023",
-                               'main_metric': 'eval_f1_macro',
+                               'main_metric': 'eval_icm_hard',
                                'problem_type':'multi_class_classification_disagreements',
                                 "label2id":{'non-sexist':0,
                                             'sexist':1},
