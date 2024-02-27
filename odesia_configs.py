@@ -75,7 +75,9 @@ DATASETS = [{'name' : 'dipromats_2023_t1',
                                'problem_type':'multi_class_classification_disagreements',
                                 "label2id":{'non-sexist':0,
                                             'sexist':1},
-                                "label_column":"label_text",                                
+                                "label_column":"label_text",
+                                "hierarchy": None,
+                                "exist_task": "task1"                                
                                 }
              }
             

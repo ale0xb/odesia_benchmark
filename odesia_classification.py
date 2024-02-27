@@ -288,7 +288,9 @@ class OdesiaTextClassificationWithDisagreements(OdesiaTextClassification):
     
     def __init__(self, model_path, dataset_path, model_config, dataset_config):                
         super().__init__(model_path, dataset_path, model_config, dataset_config)
-        
+        # Save hierarchy and task
+        self.hierarchy = dataset_config.get("hierarchy", None)
+        self.exist_task = dataset_config.get("exist_task", None)        
 
     def compute_metrics(self, pred):
         base_metrics = super().compute_metrics(pred)
@@ -305,7 +307,7 @@ class OdesiaTextClassificationWithDisagreements(OdesiaTextClassification):
         labels_df['id'] = labels_df.index
         
         # Compute ICM_Hard (needs to be converted into pandas dataframe)
-        icm_hard =  ICM_Hard(predictions_df, labels_df, "task1", None)
+        icm_hard =  ICM_Hard(predictions_df, labels_df, self.exist_task, self.hierarchy)
         icm_hard_result = icm_hard.evaluate()
 
         ## Add results to base_metrics
