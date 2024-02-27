@@ -234,43 +234,43 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
                                          tokenized_dataset=self.tokenized_dataset, 
                                          compute_metrics_function=self.compute_metrics)
 
-    def compute_metrics(self, pred):
-        labels = pred.label_ids
-
+    def convert_predictions(self, pred):
         if self.problem_type == 'multi_class_classification':
-            predictions = np.argmax(pred.predictions, axis = -1)
+            predictions = np.argmax(pred.predictions, axis=-1)
         elif self.problem_type == 'multi_label_classification':
             predictions = (pred.predictions > 0.5).astype(int)
+        return predictions
+
+    def compute_metrics(self, pred):
+        labels = pred.label_ids
+        predictions = self.convert_predictions(pred)
 
         f1_scores = f1_score(labels, predictions, average=None).tolist()
-        f1_macro =  f1_score(labels, predictions, average="macro").tolist()
+        f1_macro = f1_score(labels, predictions, average="macro").tolist()
         accuracy = accuracy_score(labels, predictions)
 
-        return {"accuracy":accuracy, 
-                "f1_macro" : f1_macro,
-                "f1_per_class": {label_f1:f1_value for label_f1, f1_value in zip(self.label_list, f1_scores)}}
+        return {
+            "accuracy": accuracy,
+            "f1_macro": f1_macro,
+            "f1_per_class": {label_f1: f1_value for label_f1, f1_value in zip(self.label_list, f1_scores)}
+        }
 
     def predict(self, split="test"):
         results = []
         dataset = self.tokenized_dataset[split]
         pred = self.trainer.predict(dataset)
+        predictions = self.convert_predictions(pred)
 
-        if self.problem_type == 'multi_class_classification':
-            predictions = np.argmax(pred.predictions, axis = -1)
-        elif self.problem_type == 'multi_label_classification':
-            predictions = (pred.predictions > 0.5).astype(int)
-        
-        for i,prediction in enumerate(predictions):
+        for i, prediction in enumerate(predictions):
             if self.problem_type == 'multi_class_classification':
                 predicted_labels = self.id2label[int(prediction)]
             else:
-                predicted_labels = []
-                for j,label_id in enumerate(prediction):
-                    if label_id == 1:
-                        predicted_labels.append(self.id2label[j])
-            result = {'test_case':self.test_case,
-                        'id':dataset[i]['id'],
-                        'label':predicted_labels}
+                predicted_labels = [self.id2label[j] for j, label_id in enumerate(prediction) if label_id == 1]
+            result = {
+                'test_case': self.test_case,
+                'id': dataset[i]['id'],
+                'label': predicted_labels
+            }
             results.append(result)
-        return {split:results}
+        return {split: results}
             
