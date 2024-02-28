@@ -14,7 +14,7 @@ from odesia_core import OdesiaHFModel
 
 import pandas as pd
 
-from vendor.exist2023evaluation import ICM_Hard
+from vendor.exist2023evaluation import ICM_Hard, ICM_Soft
 
 
 class OdesiaUniversalClassification(OdesiaHFModel):
@@ -221,7 +221,7 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
 
         if not self.tokenized_dataset:            
             # para clasificación multiclase o binaria
-            if self.problem_type != 'multi_label_classification':
+            if 'multi_label_classification' not in self.problem_type:
                 self.dataset = self.dataset.cast_column('label', ClassLabel(names=self.label_list))
             self.tokenized_dataset = self.dataset.map(lambda ex: self.tokenizer(ex["text"], truncation=True, padding=True), batched=True)
             self.tokenized_dataset.save_to_disk(self.dataset_path_tokenized)
@@ -230,7 +230,7 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
         self.model = AutoModelForSequenceClassification.from_pretrained(
             model_path, 
             num_labels=self.num_labels, 
-            problem_type = 'multi_label_classification' if self.problem_type == 'multi_label_classification' else None
+            problem_type = 'multi_label_classification' if 'multi_label_classification' in self.problem_type else None
         )
 
         self.trainer = self.load_trainer(model=self.model, 
@@ -290,27 +290,68 @@ class OdesiaTextClassificationWithDisagreements(OdesiaTextClassification):
         super().__init__(model_path, dataset_path, model_config, dataset_config)
         # Save hierarchy and task
         self.hierarchy = dataset_config.get("hierarchy", None)
-        self.exist_task = dataset_config.get("exist_task", None)        
+        self.exist_task = dataset_config.get("exist_task", None)   
+        self.training_mode = dataset_config.get("training_mode", None)
+        self.eval_mode = dataset_config.get("eval_mode", None)     
 
     def compute_metrics(self, pred):
         base_metrics = super().compute_metrics(pred)
         
-        labels = pred.label_ids
-        predictions = self.convert_predictions(pred)
-
-        # Convert to pandas dataframe 
-        predictions_df = pd.DataFrame(predictions, columns=['value'])
-        labels_df = pd.DataFrame(labels, columns=['value'])
-
-        # Create column 'id' for predictions_df and labels_df
-        predictions_df['id'] = predictions_df.index
-        labels_df['id'] = labels_df.index
         
-        # Compute ICM_Hard (needs to be converted into pandas dataframe)
-        icm_hard =  ICM_Hard(predictions_df, labels_df, self.exist_task, self.hierarchy)
-        icm_hard_result = icm_hard.evaluate()
+        if self.eval_mode == 'hard':
+            labels = pred.label_ids
+            predictions = self.convert_predictions(pred)
 
-        ## Add results to base_metrics
-        base_metrics['icm_hard'] = icm_hard_result
+            # Convert to pandas dataframe
+            if 'multi_class_classification' in self.problem_type:
+                predictions_df = pd.DataFrame([self.id2label[pred] for pred in predictions], columns=['value'])
+                labels_df = pd.DataFrame([self.id2label[label] for label in labels], columns=['value'])
+            else:
+                transformed_predictions = []
+                for pred in predictions:
+                    transformed_predictions.append({self.id2label[i]: value for i, value in enumerate(pred)})
+                predictions_df = pd.DataFrame(transformed_predictions, columns=['value'])
+                transformed_labels = []
+                for label in labels:
+                    transformed_labels.append({self.id2label[i]: value for i, value in enumerate(label)})
+                labels_df = pd.DataFrame(transformed_labels, columns=['value'])
+            
+            # Create column 'id' for predictions_df and labels_df
+            predictions_df['id'] = predictions_df.index
+            labels_df['id'] = labels_df.index
+            # Compute ICM_Hard (needs to be converted into pandas dataframe)
+            icm_hard =  ICM_Hard(predictions_df, labels_df, self.exist_task, self.hierarchy)
+            icm_hard_result = icm_hard.evaluate()
+            ## Add results to base_metrics
+            base_metrics['icm_hard'] = icm_hard_result
+        else:
+            # WARN: A bit hacky but...
+            # Get the dataset we are using to evaluate by comparing the size of pred.predictions to the size of all datasets in self.dataset
+            dataset_keys = list(self.dataset.keys())
+            dataset_sizes = [len(self.dataset[split]) for split in dataset_keys]
+            dataset_index = dataset_sizes.index(pred.predictions.shape[0])
+            gold_soft_labels = self.dataset[dataset_keys[dataset_index]]['soft_label']
+            # Get the soft labels for the predictions
+            probs = 1 / (1 + np.exp(-pred.predictions))
+
+            # Now map the probabilities to the labels
+            converted_rows = []
+            for row in probs:
+                converted_row = {}
+                for i, value in enumerate(row):
+                    converted_row[self.label_list[i]] = value
+                converted_rows.append(converted_row)
+            
+            predictions_df = pd.DataFrame({'value': converted_rows})
+            labels_df = pd.DataFrame({'value': gold_soft_labels})
+
+            predictions_df['id'] = predictions_df.index 
+            labels_df['id'] = labels_df.index
+            # Convert 
+            icm_soft = ICM_Soft(predictions_df, labels_df, self.exist_task, self.hierarchy)
+            icm_soft_result = icm_soft.evaluate()
+            ## Add results to base_metrics
+            base_metrics['icm_soft'] = icm_soft_result
+        
         return base_metrics
 
