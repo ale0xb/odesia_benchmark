@@ -45,7 +45,6 @@ DATASETS = [{'name' : 'dipromats_2023_t1',
                                     "label_column":"label_task3_hf",
                             }
              }
-            
             ,{'name':'exist_2022_t1',              
              'dataset_config':{"evall_test_case":"EXIST2022",
                                'main_metric': 'eval_f1_macro',
@@ -69,7 +68,7 @@ DATASETS = [{'name' : 'dipromats_2023_t1',
                                 "label_column":"label_text",
                                 }
              }
-             ,{'name':'exist_2023_t1_hard',              
+             ,{'name':'exist_2023_t1_hard_hard',              
              'dataset_config':{"evall_test_case":"EXIST2023",
                                'main_metric': 'eval_icm_hard',
                                'problem_type':'multi_class_classification_disagreements',
@@ -80,21 +79,93 @@ DATASETS = [{'name' : 'dipromats_2023_t1',
                                 "exist_task": "task1"                                
                                 }
              }
-            
-            ,{'name':'exist_2023_t2_hard',              
+             ,{'name':'exist_2023_t1_hard_soft',              
              'dataset_config':{"evall_test_case":"EXIST2023",
-                               'main_metric': 'eval_f1_macro',
+                               'main_metric': 'eval_icm_hard',
+                               'problem_type':'multi_class_classification_disagreements',
+                                "label2id":{'non-sexist':0,
+                                            'sexist':1},
+                                "label_column":"label_text",
+                                "hierarchy": None,
+                                "exist_task": "task1"                                
+                                }
+             }
+             ,{'name':'exist_2023_t1_soft_soft',              
+             'dataset_config':{"evall_test_case":"EXIST2023",
+                               'main_metric': 'eval_icm_hard',
+                               'problem_type':'multi_class_classification_disagreements',
+                                "label2id":{'non-sexist':0,
+                                            'sexist':1},
+                                "label_column":"label_text",
+                                "hierarchy": None,
+                                "exist_task": "task1"                                
+                                }
+             }
+            ,{'name':'exist_2023_t2_hard_hard',              
+             'dataset_config':{"evall_test_case":"EXIST2023",
+                               'main_metric': 'eval_icm_hard',
                                'problem_type':'multi_class_classification_disagreements',
                                 "label2id":{'direct':3,
                                             'reported':2, 
                                             'judgemental':1,
                                             'non-sexist':0},
+                                "hierarchy": {"sexist": ["direct", "reported", "judgemental"], "non-sexist": []},
                                 "label_column":"label_text",
                                 }
              }
-             ,{'name':'exist_2023_t3_hard',              
+             ,{'name':'exist_2023_t2_hard_soft',              
              'dataset_config':{"evall_test_case":"EXIST2023",
-                               'main_metric': 'eval_f1_macro',
+                               'main_metric': 'eval_icm_soft',
+                               'problem_type':'multi_class_classification_disagreements',
+                                "label2id":{'direct':3,
+                                            'reported':2, 
+                                            'judgemental':1,
+                                            'non-sexist':0},
+                                "hierarchy": {"sexist": ["direct", "reported", "judgemental"], "non-sexist": []},
+                                "label_column":"label_text",
+                                }
+             }
+             ,{'name':'exist_2023_t2_soft_soft',              
+             'dataset_config':{"evall_test_case":"EXIST2023",
+                               'main_metric': 'eval_icm_soft',
+                               'problem_type':'multi_class_classification_disagreements',
+                                "label2id":{'direct':3,
+                                            'reported':2, 
+                                            'judgemental':1,
+                                            'non-sexist':0},
+                                "hierarchy": {"sexist": ["direct", "reported", "judgemental"], "non-sexist": []},
+                                "label_column":"label_text",
+                                }
+             }
+             ,{'name':'exist_2023_t3_hard_hard',              
+             'dataset_config':{"evall_test_case":"EXIST2023",
+                               'main_metric': 'eval_icm_hard',
+                               'problem_type':'multi_label_classification_disagreements',
+                                "label2id":{'sexual-violence':0,
+                                            'stereotyping-dominance':1, 
+                                            'non-sexist':2,
+                                            'misogyny-non-sexual-violence':3,      
+                                            'ideological-inequality':4,             
+                                            'objectification': 5},
+                                "label_column":"label_task3_hf",
+                                }
+             },
+             ,{'name':'exist_2023_t3_hard_soft',              
+             'dataset_config':{"evall_test_case":"EXIST2023",
+                               'main_metric': 'eval_icm_soft',
+                               'problem_type':'multi_label_classification_disagreements',
+                                "label2id":{'sexual-violence':0,
+                                            'stereotyping-dominance':1, 
+                                            'non-sexist':2,
+                                            'misogyny-non-sexual-violence':3,      
+                                            'ideological-inequality':4,             
+                                            'objectification': 5},
+                                "label_column":"label_task3_hf",
+                                }
+             },
+             ,{'name':'exist_2023_t3_soft_soft',              
+             'dataset_config':{"evall_test_case":"EXIST2023",
+                               'main_metric': 'eval_icm_soft',
                                'problem_type':'multi_label_classification_disagreements',
                                 "label2id":{'sexual-violence':0,
                                             'stereotyping-dominance':1, 
