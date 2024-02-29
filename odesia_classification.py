@@ -309,12 +309,12 @@ class OdesiaTextClassificationWithDisagreements(OdesiaTextClassification):
             else:
                 transformed_predictions = []
                 for pred in predictions:
-                    transformed_predictions.append({self.id2label[i]: value for i, value in enumerate(pred)})
-                predictions_df = pd.DataFrame(transformed_predictions, columns=['value'])
+                    transformed_predictions.append([self.id2label[i] for i, value in enumerate(pred) if value > 0])
+                predictions_df = pd.DataFrame({'value': transformed_predictions})
                 transformed_labels = []
                 for label in labels:
-                    transformed_labels.append({self.id2label[i]: value for i, value in enumerate(label)})
-                labels_df = pd.DataFrame(transformed_labels, columns=['value'])
+                    transformed_labels.append([self.id2label[i] for i, value in enumerate(label) if value > 0])
+                labels_df = pd.DataFrame({'value': transformed_labels})
             
             # Create column 'id' for predictions_df and labels_df
             predictions_df['id'] = predictions_df.index
