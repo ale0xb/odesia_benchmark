@@ -88,6 +88,7 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
                                                             dataset_path=dataset_path,
                                                             model_config=model_config,
                                                             dataset_config=dataset_config)
+                    odesia_model.setup()
 
                 elif problem_type == "token_classification":
                     odesia_model = OdesiaTokenClassification(model_path=model,
@@ -109,6 +110,7 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
                                                                             dataset_path=dataset_path,
                                                                             model_config=model_config,
                                                                             dataset_config=dataset_config)
+                    odesia_model.setup() 
                 else: 
                     raise ValueError("Unknown problem type. Please check the dataset configuration.")
                 
