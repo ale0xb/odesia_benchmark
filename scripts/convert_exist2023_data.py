@@ -194,9 +194,17 @@ def save_data_to_json(split_data, output_folder):
                                     # Convert keys in soft label from YES/NO to 0/1
                                     soft_label_mapping = {'YES': 'sexist', 'NO': 'non-sexist'}
                                     task_data['soft_label'] = task_data['soft_label'].apply(lambda x: {soft_label_mapping[k]: v for k, v in x.items()})
+                                    # Convert soft_label to a list, ensuring the order of the labels
+                                    task_data['soft_label'] = task_data['soft_label'].apply(lambda x: [x['non-sexist'], x['sexist']])
+                                    # Set column label_text to ['non-sexist', 'sexist']
+                                    task_data['label_text'] = [['non-sexist', 'sexist']] * len(task_data)
                                 elif task == 2:
                                     soft_label_mapping = {'DIRECT': 'direct', 'REPORTED': 'reported', 'JUDGEMENTAL': 'judgemental', 'NO': 'non-sexist'}
                                     task_data['soft_label'] = task_data['soft_label'].apply(lambda x: {soft_label_mapping[k]: v for k, v in x.items()})
+                                    # Convert soft_label to a list, ensuring the order of the labels
+                                    task_data['soft_label'] = task_data['soft_label'].apply(lambda x: [x['non-sexist'], x['judgemental'], x['reported'], x['direct']])
+                                    # Set column label_text to ['non-sexist', 'judgemental', 'reported', 'direct']
+                                    task_data['label_text'] = [['non-sexist', 'judgemental', 'reported', 'direct']] * len(task_data)
                                 elif task == 3:
                                     soft_label_mapping = {'SEXUAL-VIOLENCE': 'sexual-violence',
                                                         'STEREOTYPING-DOMINANCE': 'stereotyping-dominance',
@@ -205,6 +213,21 @@ def save_data_to_json(split_data, output_folder):
                                                         'IDEOLOGICAL-INEQUALITY': 'ideological-inequality',
                                                         'OBJECTIFICATION': 'objectification'}
                                     task_data['soft_label'] = task_data['soft_label'].apply(lambda x: {soft_label_mapping[k]: v for k, v in x.items()})
+                                    # Convert soft_label to a list, ensuring the order of the labels
+                                    task_data['soft_label'] = task_data['soft_label'].apply(lambda x: [x['sexual-violence'], 
+                                                                                                       x['stereotyping-dominance'],
+                                                                                                       x['non-sexist'],
+                                                                                                       x['misogyny-non-sexual-violence'], 
+                                                                                                       x['ideological-inequality'], 
+                                                                                                       x['objectification']])
+                                    # Set column label_text to ['sexual-violence', 'stereotyping-dominance', 'non-sexist', 'misogyny-non-sexual-violence', 'ideological-inequality', 'objectification']
+                                    task_data['label_text'] = [['sexual-violence', 
+                                                                'stereotyping, dominance', 
+                                                                'non-sexist', 
+                                                                'misogyny-non-sexual-violence', 
+                                                                'ideological-inequality', 
+                                                                'objectification']] * len(task_data)
+                                    
                                 # Rename soft_label to label
                                 task_data = task_data.rename(columns={'soft_label': 'label'})
                                 
