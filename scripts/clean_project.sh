@@ -17,6 +17,14 @@ else
   echo "Directory trained_models does not exist."
 fi
 
+# For each folder in datasets directory, remove all folders starting with "tokenized_"
+for folder in datasets/*; do
+  if [ -d "$folder" ]; then
+    # Remove all folders starting with "tokenized_"
+    rm -rf $folder/tokenized_*
+  fi
+done
+
 # Remove report.json
 rm -rf report.json
 
