@@ -21,20 +21,26 @@ def main():
     
     language_models = {'en':[ 
                             'distilbert-base-uncased', 
-                            # 'roberta-base', 
-                            # 'roberta-large', 
-                            # 'distilbert-base-multilingual-cased', 
-                            # 'bert-base-cased', 'bert-base-multilingual-cased',
-                            # 'ixa-ehu/ixambert-base-cased',  'xlm-roberta-large', 
-                            # 'xlm-roberta-base',                                                
+                            'roberta-base', 
+                            'roberta-large', 
+                            'distilbert-base-multilingual-cased', 
+                            'bert-base-cased', 
+                            'bert-base-multilingual-cased',
+                            'ixa-ehu/ixambert-base-cased', 
+                            'xlm-roberta-large', 
+                            'xlm-roberta-base',                                                
                             ],
-                             'es':[
-                                 #'PlanTL-GOB-ES/roberta-base-bne','PlanTL-GOB-ES/roberta-large-bne','bertin-project/bertin-roberta-base-spanish',  
-                             'distilbert-base-multilingual-cased',
-                            #  'CenIA/distillbert-base-spanish-uncased',  
-                              #'dccuchile/bert-base-spanish-wwm-cased', 'bert-base-multilingual-cased', 
-                              # 'ixa-ehu/ixambert-base-cased',  'xlm-roberta-large',
-                              #'xlm-roberta-base',                      
+                        'es':[
+                            'PlanTL-GOB-ES/roberta-base-bne',
+                            'PlanTL-GOB-ES/roberta-large-bne',
+                            'bertin-project/bertin-roberta-base-spanish',  
+                            'distilbert-base-multilingual-cased',
+                            'CenIA/distillbert-base-spanish-uncased',  
+                            'dccuchile/bert-base-spanish-wwm-cased', 
+                            'bert-base-multilingual-cased', 
+                            'ixa-ehu/ixambert-base-cased', 
+                            'xlm-roberta-large',
+                            'xlm-roberta-base',                      
                         ],
                         
                     
@@ -73,10 +79,14 @@ def main():
                                 #  'dipromats_2023_t2',
                                 #  'dipromats_2023_t3',
                                 #  'exist_2023_t1_hard_hard',
-                                #  'exist_2023_t1_hard_soft',
+                                 'exist_2023_t1_hard_soft',
+                                #  'exist_2023_t1_soft_soft',
                                 #  'exist_2023_t2_hard_hard',
-                                #  'exist_2023_t2_hard_soft',
-                                'exist_2023_t3_hard_hard',
+                                 'exist_2023_t2_hard_soft',
+                                #  'exist_2023_t2_soft_soft',
+                                #  'exist_2023_t3_hard_hard',
+                                 'exist_2023_t3_hard_soft',
+                                #  'exist_2023_t3_soft_soft',
                             ]
             )
                       
