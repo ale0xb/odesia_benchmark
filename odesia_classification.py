@@ -436,33 +436,36 @@ class OdesiaTextClassificationWithDisagreements(OdesiaTextClassification):
         
             return base_metrics
     
-    def load_trainer(self, model, tokenized_dataset, data_collator, compute_metrics_function):        
-        class DisagreementSoftTrainer(Trainer):
-            def compute_loss(self, model, inputs, return_outputs=False):
-                labels = inputs.pop("labels")
-                outputs = model(**inputs)
-                logits = outputs.logits
-                loss_fct = CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1, self.model.config.num_labels))
-                return (loss, outputs) if return_outputs else loss
-            
-        training_args = TrainingArguments(
-            output_dir=self.output_dir,
-            run_name=self.output_dir,
-            overwrite_output_dir=True,
-            **self.model_config['hf_parameters']
-        )
+    def load_trainer(self, model, tokenized_dataset, data_collator, compute_metrics_function):
+        if self.training_mode == 'hard':      
+            return super().load_trainer(model, tokenized_dataset, data_collator, compute_metrics_function)
+        else:
+            class DisagreementSoftTrainer(Trainer):
+                def compute_loss(self, model, inputs, return_outputs=False):
+                    labels = inputs.pop("labels")
+                    outputs = model(**inputs)
+                    logits = outputs.logits
+                    loss_fct = CrossEntropyLoss()
+                    loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1, self.model.config.num_labels))
+                    return (loss, outputs) if return_outputs else loss
+                
+            training_args = TrainingArguments(
+                output_dir=self.output_dir,
+                run_name=self.output_dir,
+                overwrite_output_dir=True,
+                **self.model_config['hf_parameters']
+            )
 
-        trainer = DisagreementSoftTrainer(
-            model=model,
-            args=training_args,
-            train_dataset=tokenized_dataset["train"],
-            eval_dataset=tokenized_dataset["val"],
-            tokenizer=self.tokenizer,
-            data_collator=data_collator,
-            compute_metrics=compute_metrics_function,
-        )
-        return trainer
+            trainer = DisagreementSoftTrainer(
+                model=model,
+                args=training_args,
+                train_dataset=tokenized_dataset["train"],
+                eval_dataset=tokenized_dataset["val"],
+                tokenizer=self.tokenizer,
+                data_collator=data_collator,
+                compute_metrics=compute_metrics_function,
+            )
+            return trainer
 
             
         
