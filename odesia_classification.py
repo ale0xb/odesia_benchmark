@@ -8,7 +8,7 @@ from transformers import AutoModelForSequenceClassification, DataCollatorWithPad
 from transformers import pipeline
 from transformers import Trainer, TrainingArguments
 
-from torch.nn import CrossEntropyLoss
+from torch.nn import BCEWithLogitsLoss
 
 import evaluate
 from sklearn.metrics import f1_score, accuracy_score
@@ -445,8 +445,9 @@ class OdesiaTextClassificationWithDisagreements(OdesiaTextClassification):
                     labels = inputs.pop("labels")
                     outputs = model(**inputs)
                     logits = outputs.logits
-                    loss_fct = CrossEntropyLoss()
-                    loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1, self.model.config.num_labels))
+                    loss_fct = BCEWithLogitsLoss()
+                    # loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1, self.model.config.num_labels))
+                    loss = loss_fct(logits, labels.float())  # Ensure labels are float for BCEWithLogitsLoss
                     return (loss, outputs) if return_outputs else loss
                 
             training_args = TrainingArguments(
