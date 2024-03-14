@@ -148,7 +148,7 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
                 purge_disk(path = '/'.join(model_config['output_dir'].split('/')[0:-1]), 
                            main_metric=odesia_model.dataset_config['main_metric'], 
                            num_model_preserve = 1,
-                           sort_asc=False)
+                           sort_asc=True)
     return     
 
 def append_model_to_history(model, model_config, dataset, language, time, evaluation_report):
