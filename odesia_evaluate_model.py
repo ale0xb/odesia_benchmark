@@ -189,7 +189,7 @@ def purge_disk(path, main_metric, num_model_preserve):
         if os.path.exists(eval_path):
             with open(eval_path) as f:
                 evaluation_data = json.load(f)['val']
-                models_metric[model_path] = evaluation_data[main_metric]
+                models_metric[model_path] = float(evaluation_data[main_metric])
     
     if len(models_metric) == 0:
         return
