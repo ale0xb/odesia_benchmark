@@ -147,8 +147,7 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
                 # limpiamos el disco duro
                 purge_disk(path = '/'.join(model_config['output_dir'].split('/')[0:-1]), 
                            main_metric=odesia_model.dataset_config['main_metric'], 
-                           num_model_preserve = 1,
-                           sort_asc=True)
+                           num_model_preserve = 1)
     return     
 
 def append_model_to_history(model, model_config, dataset, language, time, evaluation_report):
@@ -180,7 +179,7 @@ def save_evaluation_report(model):
     save_json(f"{model.model_config['output_dir']}/evaluation.json", evaluation_report) 
     return evaluation_report
 
-def purge_disk(path, main_metric, num_model_preserve, sort_asc = False):
+def purge_disk(path, main_metric, num_model_preserve):
         
     all_models = [os.path.join(path, nombre) for nombre in os.listdir(path) if os.path.isdir(os.path.join(path, nombre))]
     models_metric = {}
@@ -195,7 +194,7 @@ def purge_disk(path, main_metric, num_model_preserve, sort_asc = False):
         return
     
     # ordenamos mejores modelos por valor
-    models_metric = {k: v for k, v in sorted(models_metric.items(), key=lambda x: x[1], reverse=sort_asc)}
+    models_metric = {k: v for k, v in sorted(models_metric.items(), key=lambda x: x[1], reverse=True)}
         
     print(f'Best model: {list(models_metric.keys())[-1]}')
     print(f'    {main_metric}: {list(models_metric.values())[-1]}')
