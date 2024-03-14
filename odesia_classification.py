@@ -260,6 +260,7 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
         else:
             raise ValueError(f"Problem type {self.problem_type} not supported")
         return predictions
+                
 
     def compute_metrics(self, pred):
         labels = pred.label_ids
@@ -343,11 +344,14 @@ class OdesiaTextClassificationWithDisagreements(OdesiaTextClassification):
         )
 
     def compute_metrics(self, pred):
-
         if self.training_mode == 'soft': # Only compute the icm_soft
             labels = pred.label_ids
             # Get the soft labels for the predictions
-            probs = 1 / (1 + np.exp(-pred.predictions))
+            if self.exist_task == 'multi_label':
+                probs = 1 / (1 + np.exp(-pred.predictions))
+            else:
+                # Apply softmax to the predictions only if we are in monolabel 
+                probs = np.exp(pred.predictions) / np.exp(pred.predictions).sum(-1, keepdims=True)
             converted_rows = []
             for row in probs:
                     converted_row = {}
@@ -413,7 +417,11 @@ class OdesiaTextClassificationWithDisagreements(OdesiaTextClassification):
                 dataset_index = dataset_sizes.index(pred.predictions.shape[0])
                 gold_soft_labels = self.dataset[dataset_keys[dataset_index]]['soft_label']
                 # Get the soft labels for the predictions
-                probs = 1 / (1 + np.exp(-pred.predictions))
+                if self.exist_task == 'multi_label':
+                    probs = 1 / (1 + np.exp(-pred.predictions))
+                else:
+                    # Apply softmax to the predictions only if we are in monolabel 
+                    probs = np.exp(pred.predictions) / np.exp(pred.predictions).sum(-1, keepdims=True)
 
                 # Now map the probabilities to the labels
                 converted_rows = []
@@ -467,10 +475,3 @@ class OdesiaTextClassificationWithDisagreements(OdesiaTextClassification):
                 compute_metrics=compute_metrics_function,
             )
             return trainer
-
-            
-        
-        
-
-
-
