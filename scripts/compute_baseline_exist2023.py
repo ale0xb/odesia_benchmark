@@ -147,14 +147,12 @@ def train_model_soft(X_train, y_train):
     print(f"Training SimpleNN in soft mode for task {task}-{language} for {N_EPOCHS} epochs...")
     for epoch in tqdm(range(N_EPOCHS), desc="Epochs"):
         model.train()
-        with tqdm(train_loader, unit="batch") as t:
-            for inputs, labels in t:
-                optimizer.zero_grad()
-                outputs = model(inputs)
-                loss = loss_function(outputs, labels)  # `soft_labels` is your tensor of soft labels
-                loss.backward()
-                optimizer.step()
-                t.set_postfix(loss=loss.item())
+        for inputs, labels in train_loader:
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = loss_function(outputs, labels)  # `soft_labels` is your tensor of soft labels
+            loss.backward()
+            optimizer.step()
     return model 
    
 
@@ -190,7 +188,7 @@ def compute_hard_baseline(task, language):
     with torch.no_grad():
         logits = trained_model_hard(X_test_hard_t)
         if task == "t1" or task == "t2":
-            y_pred = torch.softmax(logits, dim=1)
+            y_pred = torch.argmax(logits, dim=1)
         else:
             probs = torch.sigmoid(logits)
             y_pred = (probs > 0.5).int()
@@ -263,19 +261,17 @@ def train_model_hard(X_train, y_train, task):
     print(f"Training SimpleNN in Hard mode for task {task}-{language} for {N_EPOCHS} epochs...")
     for epoch in tqdm(range(N_EPOCHS), desc="Epochs"):
         model.train()
-        with tqdm(train_loader, unit="batch") as t:
-            for inputs, labels in t:
-                optimizer.zero_grad()
-                outputs = model(inputs)
-                if task == 't1' or task == 't2':
-                    labels = labels.view(-1)  # Reshape labels to be 1D if mono-label 
-                    loss = loss_function(outputs, labels.long())  # Ensure labels are long type
-                else:
-                    loss = loss_function(outputs, labels)
-                loss.backward()
-                optimizer.step()
-                t.set_postfix(loss=loss.item())
-    return model 
+        for inputs, labels in train_loader:
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            if task == 't1' or task == 't2':
+                labels = labels.view(-1)  # Reshape labels to be 1D if mono-label
+                loss = loss_function(outputs, labels.long())  # Ensure labels are long type
+            else:
+                loss = loss_function(outputs, labels)
+            loss.backward()
+            optimizer.step()
+    return model
     
 
 def compute_soft_baseline(task, language):
@@ -324,19 +320,19 @@ def compute_soft_baseline(task, language):
 
 results = {}
 if __name__ == "__main__":
-    for task in ["t1", "t2", "t3"][2:3]:
-        results[task] = {}
+    for task in ["t1", "t2", "t3"]:
         for language in ["en", "es"]:
             icm_results_hard = compute_hard_baseline(task, language)
             icm_results_soft = compute_soft_baseline(task, language)
-            # Save results
-            results[task][language] = {'hard-hard': icm_results_hard['icm_hard'], 'hard-soft': icm_results_hard['icm_hard'], 'soft-soft': icm_results_soft['icm_soft']}
-    
-    # Pretty print the results
-    print(results)
-            
 
+            results[f'{task}-hard_hard-{language}'] = icm_results_hard['icm_hard']
+            results[f'{task}-hard_soft-{language}'] = icm_results_hard['icm_soft']
+            results[f'{task}-soft_soft-{language}'] = icm_results_soft['icm_soft']
             
+    # Save the DataFrame to CSV
+    results_df = pd.DataFrame({k: [v] for k, v in results.items()})
+    results_df.to_csv('csvs/exist2023_baseline_results.csv', index=False)
+    print("Results saved to exist2023_baseline_results.csv")        
 
             
 
