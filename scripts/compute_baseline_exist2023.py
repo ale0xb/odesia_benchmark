@@ -58,25 +58,53 @@ TASK_TYPES = {
 TASK_LABEL_MAP = {
     "t1": {0: 'NO', 
            1: 'YES'},
+
     "t2": {0: 'NO',
            1: 'JUDGEMENTAL', 
            2: 'REPORTED', 
            3: 'DIRECT'},
+
+    "t3": {0: 'SEXUAL-VIOLENCE',
+           1: 'STEREOTYPING-DOMINANCE',
+           2: 'NO',
+           3: 'MISOGYNY-NON-SEXUAL-VIOLENCE',
+           4: 'IDEOLOGICAL-INEQUALITY',
+           5: 'OBJECTIFICATION'}
 }
 
 
 TASK_LAMBDAS = {
         0: {
             "t1": lambda x: {'NO': x[0], 'YES': x[1]},
+
             "t2": lambda x: {'NO': x[0], 'JUDGEMENTAL': x[1], 'REPORTED': x[2], 'DIRECT': x[3]},
+
+            "t3": lambda x: {'SEXUAL-VIOLENCE': x[0], 'STEREOTYPING-DOMINANCE': x[1], 'NO': x[2], 'MISOGYNY-NON-SEXUAL-VIOLENCE': x[3], 'IDEOLOGICAL-INEQUALITY': x[4], 'OBJECTIFICATION': x[5]}
         },
+
         1: {
-            "t1": lambda x: {'NO': x['non-sexist'], 'YES': x['sexist']},
-            "t2": lambda x: {'NO': x['non-sexist'], 'DIRECT': x['direct'], 'REPORTED': x['reported'], 'JUDGEMENTAL': x['judgemental']},
+            "t1": lambda x: {'NO': x['non-sexist'], 
+                             'YES': x['sexist']},
+
+            "t2": lambda x: {'NO': x['non-sexist'], 
+                             'DIRECT': x['direct'], 
+                             'REPORTED': x['reported'], 
+                             'JUDGEMENTAL': x['judgemental']},
+
+            "t3": lambda x: {'NO': x['non-sexist'], 
+                             'SEXUAL-VIOLENCE': x['sexual-violence'], 
+                             'STEREOTYPING-DOMINANCE': x['stereotyping-dominance'], 
+                             'OBJECTIFICATION': x['objectification'],
+                             'MISOGYNY-NON-SEXUAL-VIOLENCE': x['misogyny-non-sexual-violence'],
+                             'IDEOLOGICAL-INEQUALITY': x['ideological-inequality']}
         },
+
         2: {
             "t1": lambda x: [x['non-sexist'], x['sexist']],
+            
             "t2": lambda x: [x['non-sexist'], x['judgemental'], x['reported'], x['direct']],
+            
+            "t3": lambda x: [x['sexual-violence'], x['stereotyping-dominance'], x['non-sexist'], x['misogyny-non-sexual-violence'], x['ideological-inequality'], x['objectification']]
         }
 }
 
@@ -144,10 +172,14 @@ def compute_hard_baseline(task, language):
     # Vectorizing text data using TF-IDF
     vectorizer = TfidfVectorizer(max_features=10000)
     X_train_hard = vectorizer.fit_transform(df_train_hard['text_clean']).toarray()
-    y_train_hard = df_train_hard['label']
+    
+    LABEL_VALUE = 'label' if task in ["t1", "t2"] else 'label_task3_hf'
+
+    y_train_hard = df_train_hard[LABEL_VALUE]
+    
 
     # Train the model
-    trained_model_hard = train_model_hard(X_train_hard, y_train_hard)
+    trained_model_hard = train_model_hard(X_train_hard, y_train_hard, task)
 
     # Evaluate the model
     X_test_hard = vectorizer.transform(df_test_hard_hard['text_clean']).toarray()
@@ -157,14 +189,23 @@ def compute_hard_baseline(task, language):
     trained_model_hard.eval()
     with torch.no_grad():
         logits = trained_model_hard(X_test_hard_t)
-        y_pred = torch.argmax(logits, dim=1)
-
-    df_test_hard_hard['predicted_label']  = y_pred.numpy()
+        if task == "t1" or task == "t2":
+            y_pred = torch.softmax(logits, dim=1)
+        else:
+            probs = torch.sigmoid(logits)
+            y_pred = (probs > 0.5).int()
     
-    df_test_hard_hard['value'] = df_test_hard_hard['predicted_label'].map(TASK_LABEL_MAP[task])
-    df_labels = df_test_hard_hard[['id', 'label']].rename(columns={'label': 'value'})
-    df_labels['value'] = df_labels['value'].map(TASK_LABEL_MAP[task])
-    
+    if task == "t1" or task == "t2":
+        df_test_hard_hard['predicted_label']  = y_pred.numpy()
+        df_test_hard_hard['value'] = df_test_hard_hard['predicted_label'].map(TASK_LABEL_MAP[task])
+        df_labels = df_test_hard_hard[['id', LABEL_VALUE]].rename(columns={LABEL_VALUE: 'value'})
+        df_labels['value'] = df_labels['value'].map(TASK_LABEL_MAP[task])
+    else:
+        df_test_hard_hard['predicted_label'] = [list(p) for p in y_pred.numpy()]
+        df_test_hard_hard['predicted_label'] = df_test_hard_hard['predicted_label'].apply(lambda x: [i for i,v in enumerate(x) if v>0])
+        df_test_hard_hard['value'] = df_test_hard_hard['predicted_label'].apply(lambda x: [TASK_LABEL_MAP[task][i] for i in x])
+        df_labels = df_test_hard_hard[['id', LABEL_VALUE]].rename(columns={LABEL_VALUE: 'value'})
+        df_labels['value'] = df_labels['value'].apply(lambda x: [TASK_LABEL_MAP[task][i] for i in x])
 
     # First, ICM Hard
     icm_hard = ICM_Hard(df_test_hard_hard[['id', 'value']], df_labels, TASK_TYPES[task], TASK_HIERARCHIES[task])
@@ -176,15 +217,22 @@ def compute_hard_baseline(task, language):
     X_test_soft_t = torch.tensor(X_test_soft, dtype=torch.float32)
     with torch.no_grad():
         logits = trained_model_hard(X_test_soft_t)
-        y_pred = torch.softmax(logits, dim=1)
+        if task == "t1" or task == "t2":
+            y_pred = torch.softmax(logits, dim=1)
+            df_test_hard_soft['pred_probs'] = [list(p) for p in y_pred.numpy()]
+            df_test_hard_soft['pred_probs'] = df_test_hard_soft['pred_probs'].apply(TASK_LAMBDAS[0][task])
+            df_test_hard_soft['soft_label'] = df_test_hard_soft['soft_label'].apply(TASK_LAMBDAS[1][task])
+        else:
+            y_pred = torch.sigmoid(logits)
+            df_test_hard_soft['pred_probs'] = [list(p) for p in y_pred.numpy()]
+            df_test_hard_soft['pred_probs'] = df_test_hard_soft['pred_probs'].apply(lambda x: {TASK_LABEL_MAP[task][i]: p for i, p in enumerate(x)})
+            df_test_hard_soft['soft_label'] = df_test_hard_soft['soft_label'].apply(TASK_LAMBDAS[1][task])
 
-
-    df_test_hard_soft['pred_probs'] = [list(p) for p in y_pred.numpy()]
-    df_test_hard_soft['pred_probs'] = df_test_hard_soft['pred_probs'].apply(TASK_LAMBDAS[0][task])
-    df_test_hard_soft['soft_label'] = df_test_hard_soft['soft_label'].apply(TASK_LAMBDAS[1][task])
 
     icm_soft = ICM_Soft(df_test_hard_soft[['id', 'pred_probs']].rename(columns={'pred_probs':'value'}), 
-    df_test_hard_soft[['id', 'soft_label']].rename(columns={'soft_label': 'value'}), TASK_TYPES[task], TASK_HIERARCHIES[task])
+                        df_test_hard_soft[['id', 'soft_label']].rename(columns={'soft_label': 'value'}), 
+                        TASK_TYPES[task], 
+                        TASK_HIERARCHIES[task])
     icm_soft_result = icm_soft.evaluate()
     print(f"ICM Soft for task {task}-{language} in mode Hard-Soft: {icm_soft_result}")
     
@@ -194,19 +242,24 @@ def compute_hard_baseline(task, language):
     return {"icm_hard": icm_hard_result, "icm_soft": icm_soft_result}
 
 
-def train_model_hard(X_train, y_train):
-    loss_function = nn.CrossEntropyLoss()
-    
-    train_loader = DataLoader(TensorDataset(torch.tensor(X_train, dtype=torch.float32), 
+def train_model_hard(X_train, y_train, task):
+    if task == "t1" or task == "t2":
+        loss_function = nn.CrossEntropyLoss()
+        train_loader = DataLoader(TensorDataset(torch.tensor(X_train, dtype=torch.float32), 
                                             torch.tensor(y_train.values, dtype=torch.int32).view(-1, 1)), 
-                              batch_size=32, 
-                              shuffle=True)
-
-    # Instantiate the model
-    model = SimpleNN(input_size=X_train.shape[1], num_classes=len(y_train.unique()))
+                                    batch_size=32, 
+                                    shuffle=True)
+        model = SimpleNN(input_size=X_train.shape[1], num_classes=len(y_train.unique()))
+    else:
+        loss_function = nn.BCEWithLogitsLoss()
+        train_loader = DataLoader(TensorDataset(torch.tensor(X_train, dtype=torch.float32), 
+                                            torch.tensor(y_train, dtype=torch.float32).view(-1, len(y_train[0]))), # Multilabel
+                                    batch_size=32, 
+                                    shuffle=True)
+        model = SimpleNN(input_size=X_train.shape[1], num_classes=len(y_train[0]))
+    
     optimizer = optim.Adam(model.parameters(), lr=0.001)
         
-
     print(f"Training SimpleNN in Hard mode for task {task}-{language} for {N_EPOCHS} epochs...")
     for epoch in tqdm(range(N_EPOCHS), desc="Epochs"):
         model.train()
@@ -214,8 +267,11 @@ def train_model_hard(X_train, y_train):
             for inputs, labels in t:
                 optimizer.zero_grad()
                 outputs = model(inputs)
-                labels = labels.view(-1)  # Reshape labels to be 1D
-                loss = loss_function(outputs, labels.long())  # Ensure labels are long type
+                if task == 't1' or task == 't2':
+                    labels = labels.view(-1)  # Reshape labels to be 1D if mono-label 
+                    loss = loss_function(outputs, labels.long())  # Ensure labels are long type
+                else:
+                    loss = loss_function(outputs, labels)
                 loss.backward()
                 optimizer.step()
                 t.set_postfix(loss=loss.item())
@@ -247,8 +303,11 @@ def compute_soft_baseline(task, language):
 
     trained_model_soft.eval()
     with torch.no_grad():
-        y_pred = trained_model_soft(X_test_soft_t)
-        y_pred = torch.softmax(y_pred, dim=1)
+        logits = trained_model_soft(X_test_soft_t)
+        if task == "t1" or task == "t2":
+            y_pred = torch.softmax(logits, dim=1)
+        else:
+            y_pred = torch.sigmoid(logits)
     
     df_test_soft_soft['pred_probs'] = [list(p) for p in y_pred.numpy()]
     df_test_soft_soft['pred_probs'] = df_test_soft_soft['pred_probs'].apply(TASK_LAMBDAS[0][task])
@@ -265,7 +324,7 @@ def compute_soft_baseline(task, language):
 
 results = {}
 if __name__ == "__main__":
-    for task in ["t1", "t2", "t3"][1:2]:
+    for task in ["t1", "t2", "t3"][2:3]:
         results[task] = {}
         for language in ["en", "es"]:
             icm_results_hard = compute_hard_baseline(task, language)
