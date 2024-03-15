@@ -55,6 +55,31 @@ TASK_TYPES = {
     "t3": "multi_label"
 }
 
+TASK_LABEL_MAP = {
+    "t1": {0: 'NO', 
+           1: 'YES'},
+    "t2": {0: 'NO',
+           1: 'JUDGEMENTAL', 
+           2: 'REPORTED', 
+           3: 'DIRECT'},
+}
+
+
+TASK_LAMBDAS = {
+        0: {
+            "t1": lambda x: {'NO': x[0], 'YES': x[1]},
+            "t2": lambda x: {'NO': x[0], 'JUDGEMENTAL': x[1], 'REPORTED': x[2], 'DIRECT': x[3]},
+        },
+        1: {
+            "t1": lambda x: {'NO': x['non-sexist'], 'YES': x['sexist']},
+            "t2": lambda x: {'NO': x['non-sexist'], 'DIRECT': x['direct'], 'REPORTED': x['reported'], 'JUDGEMENTAL': x['judgemental']},
+        },
+        2: {
+            "t1": lambda x: [x['non-sexist'], x['sexist']],
+            "t2": lambda x: [x['non-sexist'], x['judgemental'], x['reported'], x['direct']],
+        }
+}
+
 N_EPOCHS = 20
 
 def clean_tweet(tweet, language="en"):
@@ -126,8 +151,7 @@ def compute_hard_baseline(task, language):
 
     # Evaluate the model
     X_test_hard = vectorizer.transform(df_test_hard_hard['text_clean']).toarray()
-    y_test_hard = df_test_hard_hard['label']
-
+    
     X_test_hard_t = torch.tensor(X_test_hard, dtype=torch.float32)
 
     trained_model_hard.eval()
@@ -136,12 +160,14 @@ def compute_hard_baseline(task, language):
         y_pred = torch.argmax(logits, dim=1)
 
     df_test_hard_hard['predicted_label']  = y_pred.numpy()
-    df_test_hard_hard['value'] = df_test_hard_hard['predicted_label'].map({0: 'NO', 1: 'YES'})
+    
+    df_test_hard_hard['value'] = df_test_hard_hard['predicted_label'].map(TASK_LABEL_MAP[task])
     df_labels = df_test_hard_hard[['id', 'label']].rename(columns={'label': 'value'})
-    df_labels['value'] = df_labels['value'].map({0: 'NO', 1: 'YES'})
+    df_labels['value'] = df_labels['value'].map(TASK_LABEL_MAP[task])
+    
 
     # First, ICM Hard
-    icm_hard = ICM_Hard(df_test_hard_hard[['id', 'value']], df_labels, TASK_TYPES["t1"], TASK_HIERARCHIES["t1"])
+    icm_hard = ICM_Hard(df_test_hard_hard[['id', 'value']], df_labels, TASK_TYPES[task], TASK_HIERARCHIES[task])
     icm_hard_result = icm_hard.evaluate()
     print(f"ICM Hard for task {task}-{language} in mode Hard-Hard: {icm_hard_result}")
 
@@ -152,13 +178,13 @@ def compute_hard_baseline(task, language):
         logits = trained_model_hard(X_test_soft_t)
         y_pred = torch.softmax(logits, dim=1)
 
+
     df_test_hard_soft['pred_probs'] = [list(p) for p in y_pred.numpy()]
-    df_test_hard_soft['pred_probs'] = df_test_hard_soft['pred_probs'].apply(lambda x: {'NO': x[0], 'YES': x[1]})
-    # Convert soft label column dictionaries from 'sexist'/'non-sexist' to 'YES'/'NO'
-    df_test_hard_soft['soft_label'] = df_test_hard_soft['soft_label'].apply(lambda x: {'NO': x['non-sexist'], 'YES': x['sexist']})
+    df_test_hard_soft['pred_probs'] = df_test_hard_soft['pred_probs'].apply(TASK_LAMBDAS[0][task])
+    df_test_hard_soft['soft_label'] = df_test_hard_soft['soft_label'].apply(TASK_LAMBDAS[1][task])
 
     icm_soft = ICM_Soft(df_test_hard_soft[['id', 'pred_probs']].rename(columns={'pred_probs':'value'}), 
-    df_test_hard_soft[['id', 'soft_label']].rename(columns={'soft_label': 'value'}), TASK_TYPES["t1"], TASK_HIERARCHIES["t1"])
+    df_test_hard_soft[['id', 'soft_label']].rename(columns={'soft_label': 'value'}), TASK_TYPES[task], TASK_HIERARCHIES[task])
     icm_soft_result = icm_soft.evaluate()
     print(f"ICM Soft for task {task}-{language} in mode Hard-Soft: {icm_soft_result}")
     
@@ -210,7 +236,7 @@ def compute_soft_baseline(task, language):
     X_train_soft = vectorizer.fit_transform(df_train_soft['text_clean']).toarray()
     X_test_soft = vectorizer.transform(df_test_soft_soft['text_clean']).toarray()
 
-    df_train_soft['soft_label'] = df_train_soft['label'].apply(lambda x: [x['non-sexist'], x['sexist']])  
+    df_train_soft['soft_label'] = df_train_soft['label'].apply(TASK_LAMBDAS[2][task])  
     y_train_soft = df_train_soft['soft_label']
 
     # Train the model
@@ -225,13 +251,13 @@ def compute_soft_baseline(task, language):
         y_pred = torch.softmax(y_pred, dim=1)
     
     df_test_soft_soft['pred_probs'] = [list(p) for p in y_pred.numpy()]
-    df_test_soft_soft['pred_probs'] = df_test_soft_soft['pred_probs'].apply(lambda x: {'NO': x[0], 'YES': x[1]})
+    df_test_soft_soft['pred_probs'] = df_test_soft_soft['pred_probs'].apply(TASK_LAMBDAS[0][task])
     # Convert soft label column dictionaries
 
-    df_test_soft_soft['soft_label'] = df_test_soft_soft['label'].apply(lambda x: {'NO': x['non-sexist'], 'YES': x['sexist']})
+    df_test_soft_soft['soft_label'] = df_test_soft_soft['label'].apply(TASK_LAMBDAS[1][task])
     
     icm_soft = ICM_Soft(df_test_soft_soft[['id', 'pred_probs']].rename(columns={'pred_probs':'value'}),
-    df_test_soft_soft[['id', 'soft_label']].rename(columns={'soft_label': 'value'}), TASK_TYPES["t1"], TASK_HIERARCHIES["t1"])
+    df_test_soft_soft[['id', 'soft_label']].rename(columns={'soft_label': 'value'}), TASK_TYPES[task], TASK_HIERARCHIES[task])
     icm_soft_result = icm_soft.evaluate()
     print(f"ICM Soft for task {task}-{language} in mode Soft-Soft: {icm_soft_result}")
     return {"icm_soft": icm_soft_result}
@@ -239,7 +265,7 @@ def compute_soft_baseline(task, language):
 
 results = {}
 if __name__ == "__main__":
-    for task in ["t1", "t2", "t3"][0:1]:
+    for task in ["t1", "t2", "t3"][1:2]:
         results[task] = {}
         for language in ["en", "es"]:
             icm_results_hard = compute_hard_baseline(task, language)
