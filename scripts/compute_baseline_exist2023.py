@@ -79,43 +79,31 @@ def preprocess_data(df, language="en"):
 
 
 
-def train_model_soft():
-    # Instantiate the model
-    model = SimpleNN(input_size=X_train_soft.shape[1], num_classes=y_train_soft_t.shape[1])
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
+def train_model_soft(X_train, y_train):
     loss_function = nn.BCEWithLogitsLoss()
+    train_loader = DataLoader(TensorDataset(
+                                    torch.tensor(X_train, dtype=torch.float32), 
+                                    torch.tensor(y_train, dtype=torch.float32)), 
+                                batch_size=32, shuffle=True)
+    # Instantiate the model    
+    model = SimpleNN(input_size=len(train_loader.dataset[0][0]), 
+                     num_classes=len(train_loader.dataset[0][1])) # This changes wrt the hard model
+    optimizer = optim.Adam(model.parameters(), lr=0.001)
+    
 
-    print(f"Training SimpleNN in Hard mode for task {task}-{language} for {N_EPOCHS} epochs...")
-
-    for epoch in range(N_EPOCHS):
+    print(f"Training SimpleNN in soft mode for task {task}-{language} for {N_EPOCHS} epochs...")
+    for epoch in tqdm(range(N_EPOCHS), desc="Epochs"):
         model.train()
-        for inputs, labels in train_loader:
-            optimizer.zero_grad()
-            outputs = model(inputs)
-            loss = loss_function(outputs, labels)  # `soft_labels` is your tensor of soft labels
-            loss.backward()
-            optimizer.step()
-        
-        print(f'Epoch {epoch+1}, Loss: {loss.item()}')
-
-
-def evaluate_model_trained_soft(model, X_test_soft_t, df_test_hard_soft, language, task):
-    model.eval()
-    with torch.no_grad():
-        y_pred = model(X_test_soft_t)
-        y_pred = torch.softmax(y_pred, dim=1)
-
-    df_test_hard_soft['pred_probs'] = [list(p) for p in y_pred.numpy()]
-    df_test_hard_soft['pred_probs'] = df_test_hard_soft['pred_probs'].apply(lambda x: {'NO': x[0], 'YES': x[1]})
-    # Convert soft label column dictionaries from 'sexist'/'non-sexist' to 'YES'/'NO'
-    # Convert soft label column dictionaries from 'sexist'/'non-sexist' to 'YES'/'NO'
-    df_test_hard_soft['soft_label'] = df_test_hard_soft['label'].apply(lambda x: {'NO': x['non-sexist'], 'YES': x['sexist']})
-
-    icm_soft = ICM_Soft(df_test_hard_soft[['id', 'pred_probs']].rename(columns={'pred_probs':'value'}),
-    df_test_hard_soft[['id', 'soft_label']].rename(columns={'soft_label': 'value'}), TASK_TYPES["t1"], TASK_HIERARCHIES["t1"])
-    icm_soft_result = icm_soft.evaluate()
-    print(f"ICM Soft for task {task}-{language} in mode Soft-Soft: {icm_soft_result}")
-    return {"icm_soft": icm_soft_result}
+        with tqdm(train_loader, unit="batch") as t:
+            for inputs, labels in t:
+                optimizer.zero_grad()
+                outputs = model(inputs)
+                loss = loss_function(outputs, labels)  # `soft_labels` is your tensor of soft labels
+                loss.backward()
+                optimizer.step()
+                t.set_postfix(loss=loss.item())
+    return model 
+   
 
 def compute_hard_baseline(task, language):
     print(f"Calculating baseline for task {task}-{language} in mode Hard-Hard...")
@@ -181,13 +169,17 @@ def compute_hard_baseline(task, language):
 
 
 def train_model_hard(X_train, y_train):
+    loss_function = nn.CrossEntropyLoss()
+    
+    train_loader = DataLoader(TensorDataset(torch.tensor(X_train, dtype=torch.float32), 
+                                            torch.tensor(y_train.values, dtype=torch.int32).view(-1, 1)), 
+                              batch_size=32, 
+                              shuffle=True)
+
     # Instantiate the model
     model = SimpleNN(input_size=X_train.shape[1], num_classes=len(y_train.unique()))
     optimizer = optim.Adam(model.parameters(), lr=0.001)
-    loss_function = nn.CrossEntropyLoss()
-
-    train_dataset = TensorDataset(torch.tensor(X_train, dtype=torch.float32), torch.tensor(y_train.values, dtype=torch.int32).view(-1, 1))
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+        
 
     print(f"Training SimpleNN in Hard mode for task {task}-{language} for {N_EPOCHS} epochs...")
     for epoch in tqdm(range(N_EPOCHS), desc="Epochs"):
@@ -201,7 +193,6 @@ def train_model_hard(X_train, y_train):
                 loss.backward()
                 optimizer.step()
                 t.set_postfix(loss=loss.item())
-    
     return model 
     
 
@@ -209,32 +200,55 @@ def compute_soft_baseline(task, language):
     print(f"Calculating baseline for task {task}-{language} in mode Soft-Soft...")
 
     train_soft_path = f'datasets/exist_2023_{task}_soft_soft/train_{language}.json'
-    test_hard_soft_path = f'datasets/exist_2023_{task}_soft_soft/test_{language}.json'
+    test_soft_soft_path = f'datasets/exist_2023_{task}_soft_soft/test_{language}.json'
 
     df_train_soft = preprocess_data(pd.read_json(train_soft_path), language=language)
-    df_test_soft_soft = preprocess_data(pd.read_json(test_hard_soft_path), language=language)
+    df_test_soft_soft = preprocess_data(pd.read_json(test_soft_soft_path), language=language)
     
     # Vectorizing text data using TF-IDF
     vectorizer = TfidfVectorizer(max_features=10000)
     X_train_soft = vectorizer.fit_transform(df_train_soft['text_clean']).toarray()
     X_test_soft = vectorizer.transform(df_test_soft_soft['text_clean']).toarray()
 
-    X_train_soft_t = torch.tensor(X_train_soft, dtype=torch.float32)
-    X_test_soft_t = torch.tensor(X_test_soft, dtype=torch.float32)
-
     df_train_soft['soft_label'] = df_train_soft['label'].apply(lambda x: [x['non-sexist'], x['sexist']])  
     y_train_soft = df_train_soft['soft_label']
 
-    y_train_soft_t = torch.tensor(y_train_soft, dtype=torch.float32)
+    # Train the model
+    trained_model_soft = train_model_soft(X_train_soft, y_train_soft)
 
-    train_dataset = TensorDataset(X_train_soft_t, y_train_soft_t)
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+    # Evaluate the model
+    X_test_soft_t = torch.tensor(X_test_soft, dtype=torch.float32)
 
+    trained_model_soft.eval()
+    with torch.no_grad():
+        y_pred = trained_model_soft(X_test_soft_t)
+        y_pred = torch.softmax(y_pred, dim=1)
+    
+    df_test_soft_soft['pred_probs'] = [list(p) for p in y_pred.numpy()]
+    df_test_soft_soft['pred_probs'] = df_test_soft_soft['pred_probs'].apply(lambda x: {'NO': x[0], 'YES': x[1]})
+    # Convert soft label column dictionaries
+
+    df_test_soft_soft['soft_label'] = df_test_soft_soft['label'].apply(lambda x: {'NO': x['non-sexist'], 'YES': x['sexist']})
+    
+    icm_soft = ICM_Soft(df_test_soft_soft[['id', 'pred_probs']].rename(columns={'pred_probs':'value'}),
+    df_test_soft_soft[['id', 'soft_label']].rename(columns={'soft_label': 'value'}), TASK_TYPES["t1"], TASK_HIERARCHIES["t1"])
+    icm_soft_result = icm_soft.evaluate()
+    print(f"ICM Soft for task {task}-{language} in mode Soft-Soft: {icm_soft_result}")
+    return {"icm_soft": icm_soft_result}
+    
+
+results = {}
 if __name__ == "__main__":
     for task in ["t1", "t2", "t3"][0:1]:
+        results[task] = {}
         for language in ["en", "es"]:
             icm_results_hard = compute_hard_baseline(task, language)
-            # icm_results_soft = compute_soft_baseline(task, language)
+            icm_results_soft = compute_soft_baseline(task, language)
+            # Save results
+            results[task][language] = {'hard-hard': icm_results_hard['icm_hard'], 'hard-soft': icm_results_hard['icm_hard'], 'soft-soft': icm_results_soft['icm_soft']}
+    
+    # Pretty print the results
+    print(results)
             
 
             
