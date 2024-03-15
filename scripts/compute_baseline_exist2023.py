@@ -144,7 +144,6 @@ def train_model_soft(X_train, y_train):
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     
 
-    print(f"Training SimpleNN in soft mode for task {task}-{language} for {N_EPOCHS} epochs...")
     for epoch in tqdm(range(N_EPOCHS), desc="Epochs"):
         model.train()
         for inputs, labels in train_loader:
@@ -175,7 +174,7 @@ def compute_hard_baseline(task, language):
 
     y_train_hard = df_train_hard[LABEL_VALUE]
     
-
+    print(f"Training SimpleNN in Hard mode for task {task}-{language} for {N_EPOCHS} epochs...")
     # Train the model
     trained_model_hard = train_model_hard(X_train_hard, y_train_hard, task)
 
@@ -258,7 +257,7 @@ def train_model_hard(X_train, y_train, task):
     
     optimizer = optim.Adam(model.parameters(), lr=0.001)
         
-    print(f"Training SimpleNN in Hard mode for task {task}-{language} for {N_EPOCHS} epochs...")
+    
     for epoch in tqdm(range(N_EPOCHS), desc="Epochs"):
         model.train()
         for inputs, labels in train_loader:
@@ -292,6 +291,7 @@ def compute_soft_baseline(task, language):
     y_train_soft = df_train_soft['soft_label']
 
     # Train the model
+    print(f"Training SimpleNN in soft mode for task {task}-{language} for {N_EPOCHS} epochs...")
     trained_model_soft = train_model_soft(X_train_soft, y_train_soft)
 
     # Evaluate the model
@@ -317,22 +317,48 @@ def compute_soft_baseline(task, language):
     print(f"ICM Soft for task {task}-{language} in mode Soft-Soft: {icm_soft_result}")
     return {"icm_soft": icm_soft_result}
     
+def main():
+    # Initialize a list to collect results from each run
+    all_runs_results = []
 
-results = {}
+    # Run the procedure 10 times, now with tqdm for progress tracking
+    for run in tqdm(range(10), desc="Overall Progress"):
+        results = {}
+        for task in ["t1", "t2", "t3"]:
+            for language in ["en", "es"]:
+                icm_results_hard = compute_hard_baseline(task, language)
+                icm_results_soft = compute_soft_baseline(task, language)
+
+                results[f'{task}_hard_hard_{language}'] = icm_results_hard['icm_hard']
+                results[f'{task}_hard_soft_{language}'] = icm_results_hard['icm_soft']
+                results[f'{task}_soft_soft_{language}'] = icm_results_soft['icm_soft']
+                
+        # Add run identifier
+        results['run'] = run
+        all_runs_results.append(results)
+
+    # Convert all runs results into a DataFrame
+    df_all_runs = pd.DataFrame(all_runs_results)
+
+    # Calculate mean and standard deviation for each column except 'run'
+    # summary_stats = df_all_runs.describe().loc[['mean', 'std']].transpose()
+    # summary_stats['result'] = summary_stats['mean'].round(4).astype(str) + " (" + summary_stats['std'].round(4).astype(str) + ")"
+
+    # Append summary row
+    # summary_row = summary_stats['result'].to_dict()
+    # summary_row['run'] = 'mean(std)'
+    
+    # Convert summary_row to a DataFrame for concatenation
+    # summary_df = pd.DataFrame([summary_row])
+
+    # Concatenate the summary_df to df_all_runs
+    # df_all_runs = pd.concat([df_all_runs, summary_df], ignore_index=True)
+
+    # Proceed to save df_all_runs to CSV as before
+    df_all_runs.to_csv('csvs/exist_2023_baseline_results.csv', index=False)
+
 if __name__ == "__main__":
-    for task in ["t1", "t2", "t3"]:
-        for language in ["en", "es"]:
-            icm_results_hard = compute_hard_baseline(task, language)
-            icm_results_soft = compute_soft_baseline(task, language)
-
-            results[f'{task}-hard_hard-{language}'] = icm_results_hard['icm_hard']
-            results[f'{task}-hard_soft-{language}'] = icm_results_hard['icm_soft']
-            results[f'{task}-soft_soft-{language}'] = icm_results_soft['icm_soft']
-            
-    # Save the DataFrame to CSV
-    results_df = pd.DataFrame({k: [v] for k, v in results.items()})
-    results_df.to_csv('csvs/exist2023_baseline_results.csv', index=False)
-    print("Results saved to exist2023_baseline_results.csv")        
+    main()
 
             
 
