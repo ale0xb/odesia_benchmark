@@ -4,41 +4,81 @@ import pandas as pd
 NORMALIZATION_INTERVALS = { # -gold/+gold 
     "t1": {
         "en": {
-            "hard_hard": 0.9798,    
-            "hard_soft": 3.1141,
-            "soft_soft": 3.1141,
+            "hard_hard": [-0.9798, 0.9798],    
+            "hard_soft": [-3.1141, 3.1141],
+            "soft_soft": [-3.1141, 3.1141],
         },
         "es": {
-            "hard_hard": 0.9999,
-            "hard_soft": 3.1177,
-            "soft_soft": 3.1177,
+            "hard_hard": [-0.9999, 0.9999],
+            "hard_soft": [-3.1177, 3.1177],
+            "soft_soft": [-3.1177, 3.1177],
         }
     },
     "t2": {
         "en": {
-            "hard_hard": 1.4449,
-            "hard_soft": 6.1178,
-            "soft_soft": 6.1178,
+            "hard_hard": [-1.4449, 1.4449],
+            "hard_soft": [-6.1178, 6.1178],
+            "soft_soft": [-6.1178, 6.1178],
         },
         "es": {
-            "hard_hard": 1.6007,
-            "hard_soft": 6.2431,
-            "soft_soft": 6.2431,
+            "hard_hard": [-1.6007, 1.6007],
+            "hard_soft": [-6.2431, 6.2431],
+            "soft_soft": [-6.2431, 6.2431],
         }       
     },
     "t3": {
         "en": {
-            "hard_hard": 2.0402,
-            "hard_soft": 9.1255,
-            "soft_soft": 9.1255,
+            "hard_hard": [-2.0402, 2.0402],
+            "hard_soft": [-9.1255, 9.1255],
+            "soft_soft": [-9.1255, 9.1255],
         },
         "es": {
-            "hard_hard": 2.2393,
-            "hard_soft": 9.6071,
-            "soft_soft": 9.6071
+            "hard_hard": [-2.2393, 2.2393],
+            "hard_soft": [-9.6071, 9.6071],
+            "soft_soft": [-9.6071, 9.6071]
         }
     }
 }
+
+NORMALIZATION_INTERVALS_COMPETITION =  { # -gold/+gold 
+    "t1": {
+        "en": {
+            "hard_hard": [-0.3965, 0.9798],    
+            "hard_soft": [-3.8158, 3.1141],
+            "soft_soft": [-3.8158, 3.1141],
+        },
+        "es": {
+            "hard_hard": [-0.4897, 0.9999],
+            "hard_soft": [-2.5742, 3.1177],
+            "soft_soft": [-2.5742, 3.1177],
+        }
+    },
+    "t2": {
+        "en": {
+            "hard_hard": [-3.4728, 1.4449],
+            "hard_soft": [-39.4948, 6.1178],
+            "soft_soft": [-39.4948, 6.1178],
+        },
+        "es": {
+            "hard_hard": [-2.939, 1.6007],
+            "hard_soft": [-28.7093, 6.2431],
+            "soft_soft": [-28.7093, 6.2431],
+        }       
+    },
+    "t3": {
+        "en": {
+            "hard_hard": [-2.9279, 2.0402],
+            "hard_soft": [-46.9473, 9.1255],
+            "soft_soft": [-46.9473, 9.1255],
+        },
+        "es": {
+            "hard_hard": [-3.3196, 2.2393],
+            "hard_soft": [-45.426, 9.6071],
+            "soft_soft": [-45.426, 9.6071]
+        }
+    }
+}
+
 
 MAIN_METRICS = {
     "hard_hard": "eval_icm_hard",
@@ -63,13 +103,12 @@ def main():
             # read the csv for this task 
             task_df_en = pd.read_csv(f"csvs/exist_2023_{task_id}_en.csv")
             task_df_es = pd.read_csv(f"csvs/exist_2023_{task_id}_es.csv")
-
     
             best_models_en = task_df_en.loc[task_df_en.groupby(['model', 'language'])[f'evaluation.val.{MAIN_METRICS[mode]}'].idxmax()]
             best_models_es = task_df_es.loc[task_df_es.groupby(['model', 'language'])[f'evaluation.val.{MAIN_METRICS[mode]}'].idxmax()]
 
-            NORM_INTERVAL_EN = [-NORMALIZATION_INTERVALS[task]["en"][mode], NORMALIZATION_INTERVALS[task]["en"][mode]]
-            NORM_INTERVAL_ES = [-NORMALIZATION_INTERVALS[task]["es"][mode], NORMALIZATION_INTERVALS[task]["es"][mode]]
+            NORM_INTERVAL_EN = NORMALIZATION_INTERVALS[task]["en"][mode]
+            NORM_INTERVAL_ES = NORMALIZATION_INTERVALS[task]["es"][mode]
 
             # Save baseline info
             best_models_en["baseline"] = avg_baselines[f"{task_id}_en"]
