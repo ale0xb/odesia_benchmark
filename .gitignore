@@ -1,0 +1,9 @@
+venv
+datasets
+trained_models
+csvs
+__pycache__
+.ipynb_checkpoints
+__MACOSX
+report.json
+scripts/EXIST_2023_Shared_Task

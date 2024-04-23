@@ -3,7 +3,7 @@ from datetime import timedelta
 import itertools
 import json
 from generate_csv import generate_csv_from_report
-from odesia_classification import OdesiaTextClassification, OdesiaTokenClassification
+from odesia_classification import OdesiaTextClassification, OdesiaTokenClassification, OdesiaTextClassificationWithDisagreements
 from odesia_qa import OdesiaQuestionAnswering
 from odesia_sentence_similarity import OdesiaSentenceSimilarity
 from odesia_configs import DATASETS, GENERIC_MODEL_CONFIG
@@ -88,6 +88,7 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
                                                             dataset_path=dataset_path,
                                                             model_config=model_config,
                                                             dataset_config=dataset_config)
+                    odesia_model.setup()
 
                 elif problem_type == "token_classification":
                     odesia_model = OdesiaTokenClassification(model_path=model,
@@ -104,6 +105,14 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
                                                             dataset_path=dataset_path,
                                                             model_config=model_config,
                                                             dataset_config=dataset_config)
+                elif problem_type in ["multi_class_classification_disagreements", "multi_label_classification_disagreements"]:
+                    odesia_model = OdesiaTextClassificationWithDisagreements(model_path=model,
+                                                                            dataset_path=dataset_path,
+                                                                            model_config=model_config,
+                                                                            dataset_config=dataset_config)
+                    odesia_model.setup() 
+                else: 
+                    raise ValueError("Unknown problem type. Please check the dataset configuration.")
                 
                 print(f"[{datetime.datetime.now()}] >>>> Training...")                
                 odesia_model.train()
@@ -171,31 +180,36 @@ def save_evaluation_report(model):
     return evaluation_report
 
 def purge_disk(path, main_metric, num_model_preserve):
-        
-    all_models = [os.path.join(path, nombre) for nombre in os.listdir(path) if os.path.isdir(os.path.join(path, nombre))]
+    all_models = [os.path.join(path, name) for name in os.listdir(path) if os.path.isdir(os.path.join(path, name))]
     models_metric = {}
     
+    # Load metrics
     for model_path in all_models:
-        eval_path = f'{model_path}/evaluation.json'
+        eval_path = os.path.join(model_path, 'evaluation.json')
         if os.path.exists(eval_path):
-            evaluation_data = json.load(open(eval_path))['val']
-            models_metric[model_path] = evaluation_data[main_metric]
-        
+            with open(eval_path) as f:
+                evaluation_data = json.load(f)['val']
+                models_metric[model_path] = float(evaluation_data[main_metric])
+    
     if len(models_metric) == 0:
         return
     
-    # ordenamos mejores modelos por valor
-    models_metric = {k: v for k, v in sorted(models_metric.items(), key=lambda x: x[1])}
-        
-    print(f'Best model: {list(models_metric.keys())[-1]}')
-    print(f'    {main_metric}: {list(models_metric.values())[-1]}')
+    # Sort models by metric in descending order
+    sorted_models = sorted(models_metric.items(), key=lambda x: x[1], reverse=True)
     
-    if len(models_metric) > 1:
-        dict_slice = list(itertools.islice(models_metric.items(), len(models_metric)-num_model_preserve))
-        for path, metric in dict_slice:
-            if os.path.isdir(f'{path}/model'):
+    # Debugging prints
+    best_model_path, best_metric = sorted_models[0]
+    print(f'Best model: {best_model_path}')
+    print(f'    {main_metric}: {best_metric}')
+    
+    # Purge logic
+    if len(sorted_models) > num_model_preserve:
+        models_to_delete = sorted_models[num_model_preserve:]
+        for path, metric in models_to_delete:
+            model_dir = os.path.join(path, 'model')
+            if os.path.isdir(model_dir):
                 print(f'    >>>> Deleting model...', path, metric)
-                shutil.rmtree(f'{path}/model')
+                shutil.rmtree(model_dir)
     else:
         print('Nothing to purge in the disk.')
             

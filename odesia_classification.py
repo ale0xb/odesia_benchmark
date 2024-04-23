@@ -6,11 +6,20 @@ from datasets import ClassLabel
 from transformers import AutoModelForTokenClassification, DataCollatorForTokenClassification
 from transformers import AutoModelForSequenceClassification, DataCollatorWithPadding
 from transformers import pipeline
+from transformers import Trainer, TrainingArguments
+
+from torch.nn import BCEWithLogitsLoss
 
 import evaluate
 from sklearn.metrics import f1_score, accuracy_score
 
 from odesia_core import OdesiaHFModel
+
+import pandas as pd
+
+from vendor.exist2023evaluation import ICM_Hard, ICM_Soft
+
+
 
 
 class OdesiaUniversalClassification(OdesiaHFModel):
@@ -203,74 +212,266 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
     
     def __init__(self, model_path, dataset_path, model_config, dataset_config):                
         super().__init__(model_path, dataset_path, model_config, dataset_config)
+         # Load DataCollator
+        self.data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)
         
-        # Step 1. Load DataCollator            
-        self.data_collator = DataCollatorWithPadding(tokenizer=self.tokenizer)        
 
-        # Step 2. Tokenized the dataset
+    def setup(self):
+    
+        self.tokenize_dataset() 
+        self.initialize_model()
+        self.setup_trainer()
 
-        # renaming the column label
+    
+    def tokenize_dataset(self):
+         # This method is used to setup the model and the trainer. Needs to be called after instantiating the class. 
         column_names = self.dataset['train'].column_names
-        if 'label' in column_names and dataset_config["label_column"].strip() != 'label':
+        if 'label' in column_names and self.dataset_config["label_column"].strip() != 'label':
             self.dataset = self.dataset.rename_column('label', "label_old")        
-        self.dataset = self.dataset.rename_column(dataset_config["label_column"], "label")
+        self.dataset = self.dataset.rename_column(self.dataset_config["label_column"], "label")
 
-        if not self.tokenized_dataset:            
-            # para clasificación multiclase o binaria
-            if self.problem_type != 'multi_label_classification':
+        if not self.tokenized_dataset:
+            if 'multi_label_classification' not in self.problem_type:
                 self.dataset = self.dataset.cast_column('label', ClassLabel(names=self.label_list))
             self.tokenized_dataset = self.dataset.map(lambda ex: self.tokenizer(ex["text"], truncation=True, padding=True), batched=True)
             self.tokenized_dataset.save_to_disk(self.dataset_path_tokenized)
-
-        # Step 3. Loading model, trainer and metrics
+    
+    def initialize_model(self):
         self.model = AutoModelForSequenceClassification.from_pretrained(
-            model_path, 
+            self.model_path, 
             num_labels=self.num_labels, 
-            problem_type = 'multi_label_classification' if self.problem_type == 'multi_label_classification' else None
+            problem_type='multi_label_classification' if 'multi_label_classification' in self.problem_type else None
         )
 
-        self.trainer = self.load_trainer(model=self.model, 
-                                         data_collator=self.data_collator, 
-                                         tokenized_dataset=self.tokenized_dataset, 
-                                         compute_metrics_function=self.compute_metrics)
+    def setup_trainer(self):
+        self.trainer = self.load_trainer(
+            model=self.model, 
+            data_collator=self.data_collator, 
+            tokenized_dataset=self.tokenized_dataset, 
+            compute_metrics_function=self.compute_metrics
+        )
+
+    def convert_predictions(self, pred):
+        if 'multi_class_classification' in self.problem_type:
+            predictions = np.argmax(pred.predictions, axis=-1)
+        elif 'multi_label_classification' in self.problem_type:
+            probs = 1 / (1 + np.exp(-pred.predictions))
+            predictions = (probs > 0.5).astype(int)
+        else:
+            raise ValueError(f"Problem type {self.problem_type} not supported")
+        return predictions
+                
 
     def compute_metrics(self, pred):
         labels = pred.label_ids
-
-        if self.problem_type == 'multi_class_classification':
-            predictions = np.argmax(pred.predictions, axis = -1)
-        elif self.problem_type == 'multi_label_classification':
-            predictions = (pred.predictions > 0.5).astype(int)
+        predictions = self.convert_predictions(pred)
 
         f1_scores = f1_score(labels, predictions, average=None).tolist()
-        f1_macro =  f1_score(labels, predictions, average="macro").tolist()
+        f1_macro = f1_score(labels, predictions, average="macro").tolist()
         accuracy = accuracy_score(labels, predictions)
 
-        return {"accuracy":accuracy, 
-                "f1_macro" : f1_macro,
-                "f1_per_class": {label_f1:f1_value for label_f1, f1_value in zip(self.label_list, f1_scores)}}
+        return {
+            "accuracy": accuracy,
+            "f1_macro": f1_macro,
+            "f1_per_class": {label_f1: f1_value for label_f1, f1_value in zip(self.label_list, f1_scores)}
+        }
 
     def predict(self, split="test"):
         results = []
         dataset = self.tokenized_dataset[split]
         pred = self.trainer.predict(dataset)
+        predictions = self.convert_predictions(pred)
 
-        if self.problem_type == 'multi_class_classification':
-            predictions = np.argmax(pred.predictions, axis = -1)
-        elif self.problem_type == 'multi_label_classification':
-            predictions = (pred.predictions > 0.5).astype(int)
-        
-        for i,prediction in enumerate(predictions):
-            if self.problem_type == 'multi_class_classification':
+        for i, prediction in enumerate(predictions):
+            if 'multi_class_classification' in self.problem_type:
                 predicted_labels = self.id2label[int(prediction)]
+            elif 'multi_label_classification' in self.problem_type:
+                predicted_labels = [self.id2label[j] for j, label_id in enumerate(prediction) if label_id == 1]
             else:
-                predicted_labels = []
-                for j,label_id in enumerate(prediction):
-                    if label_id == 1:
-                        predicted_labels.append(self.id2label[j])
-            result = {'test_case':self.test_case,
-                        'id':dataset[i]['id'],
-                        'label':predicted_labels}
+                raise ValueError(f"Problem type {self.problem_type} not supported")
+        
+            result = {
+                'test_case': self.test_case,
+                'id': dataset[i]['id'],
+                'label': predicted_labels
+            }
             results.append(result)
-        return {split:results}
+        return {split: results}
+
+    
+class OdesiaTextClassificationWithDisagreements(OdesiaTextClassification):
+    
+    def __init__(self, model_path, dataset_path, model_config, dataset_config):                
+        super().__init__(model_path, dataset_path, model_config, dataset_config)
+        # Save hierarchy and task
+        self.hierarchy = dataset_config.get("hierarchy", None)
+        self.exist_task = dataset_config.get("exist_task", None)   
+        self.training_mode = dataset_config.get("training_mode", None)
+        self.eval_mode = dataset_config.get("eval_mode", None)
+    
+    def tokenize_dataset(self):
+        __this__ = self 
+        if self.training_mode == 'soft':
+            # def preprocess_labels(example):
+            #     # Convert label dict to list of probabilities in the correct order
+            #     example["labels"] = [example["label"][label] for label in __this__.label_list]
+            #     return example
             
+            if not self.tokenized_dataset:
+                # self.dataset = self.dataset.map(preprocess_labels, batched=False)  # Ensure labels are processed
+                self.tokenized_dataset = self.dataset.map(
+                    lambda ex: self.tokenizer(ex["text"], truncation=True, padding=True), 
+                    batched=True
+                )
+                self.tokenized_dataset.save_to_disk(self.dataset_path_tokenized)
+        else: # Resort to the parent class method
+            super().tokenize_dataset()
+    
+    def initialize_model(self):
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            self.model_path, 
+            num_labels=self.num_labels,
+            # Set problem type to multi_label_classification if we are using soft training mode
+            problem_type='multi_label_classification' if ('multi_label_classification' in self.problem_type or self.training_mode=='soft') else None
+        )
+
+    def setup_trainer(self):
+        self.trainer = self.load_trainer(
+            model=self.model, 
+            data_collator=self.data_collator, 
+            tokenized_dataset=self.tokenized_dataset, 
+            compute_metrics_function=self.compute_metrics
+        )
+
+    def compute_metrics(self, pred):
+        if self.training_mode == 'soft': # Only compute the icm_soft
+            labels = pred.label_ids
+            # Get the soft labels for the predictions
+            if self.exist_task == 'multi_label':
+                probs = 1 / (1 + np.exp(-pred.predictions))
+            else:
+                # Apply softmax to the predictions only if we are in monolabel 
+                probs = np.exp(pred.predictions) / np.exp(pred.predictions).sum(-1, keepdims=True)
+            converted_rows = []
+            for row in probs:
+                    converted_row = {}
+                    for i, value in enumerate(row):
+                        converted_row[self.label_list[i]] = value
+                    converted_rows.append(converted_row)
+            predictions_df = pd.DataFrame({'value': converted_rows})
+
+            converted_labels = []
+            for row in labels:
+                converted_row = {}
+                for i, value in enumerate(row):
+                    converted_row[self.label_list[i]] = value
+                converted_labels.append(converted_row)
+            labels_df = pd.DataFrame({'value': converted_labels})
+
+            # Create column 'id' for predictions_df and labels_df
+            predictions_df['id'] = predictions_df.index
+            labels_df['id'] = labels_df.index
+
+            # Compute ICM_Soft (needs to be converted into pandas dataframe)
+            icm_soft = ICM_Soft(predictions_df, labels_df, self.exist_task, self.hierarchy)
+            icm_soft_result = icm_soft.evaluate()
+            ## Add results to base_metrics
+            return {
+                'icm_soft': icm_soft_result
+            }
+
+        else: 
+            base_metrics = super().compute_metrics(pred)
+        
+            if self.eval_mode == 'hard':
+                labels = pred.label_ids
+                predictions = self.convert_predictions(pred)
+
+                # Convert to pandas dataframe
+                if 'multi_class_classification' in self.problem_type:
+                    predictions_df = pd.DataFrame([self.id2label[pred] for pred in predictions], columns=['value'])
+                    labels_df = pd.DataFrame([self.id2label[label] for label in labels], columns=['value'])
+                else:
+                    transformed_predictions = []
+                    for pred in predictions:
+                        transformed_predictions.append([self.id2label[i] for i, value in enumerate(pred) if value > 0])
+                    predictions_df = pd.DataFrame({'value': transformed_predictions})
+                    transformed_labels = []
+                    for label in labels:
+                        transformed_labels.append([self.id2label[i] for i, value in enumerate(label) if value > 0])
+                    labels_df = pd.DataFrame({'value': transformed_labels})
+                
+                # Create column 'id' for predictions_df and labels_df
+                predictions_df['id'] = predictions_df.index
+                labels_df['id'] = labels_df.index
+                # Compute ICM_Hard (needs to be converted into pandas dataframe)
+                icm_hard =  ICM_Hard(predictions_df, labels_df, self.exist_task, self.hierarchy)
+                icm_hard_result = icm_hard.evaluate()
+                ## Add results to base_metrics
+                base_metrics['icm_hard'] = icm_hard_result
+            else:
+                # WARN: A bit hacky but...
+                # Get the dataset we are using to evaluate by comparing the size of pred.predictions to the size of all datasets in self.dataset
+                dataset_keys = list(self.dataset.keys())
+                dataset_sizes = [len(self.dataset[split]) for split in dataset_keys]
+                dataset_index = dataset_sizes.index(pred.predictions.shape[0])
+                gold_soft_labels = self.dataset[dataset_keys[dataset_index]]['soft_label']
+                # Get the soft labels for the predictions
+                if self.exist_task == 'multi_label':
+                    probs = 1 / (1 + np.exp(-pred.predictions))
+                else:
+                    # Apply softmax to the predictions only if we are in monolabel 
+                    probs = np.exp(pred.predictions) / np.exp(pred.predictions).sum(-1, keepdims=True)
+
+                # Now map the probabilities to the labels
+                converted_rows = []
+                for row in probs:
+                    converted_row = {}
+                    for i, value in enumerate(row):
+                        converted_row[self.label_list[i]] = value
+                    converted_rows.append(converted_row)
+                
+                predictions_df = pd.DataFrame({'value': converted_rows})
+                labels_df = pd.DataFrame({'value': gold_soft_labels})
+
+                predictions_df['id'] = predictions_df.index 
+                labels_df['id'] = labels_df.index
+                # Convert 
+                icm_soft = ICM_Soft(predictions_df, labels_df, self.exist_task, self.hierarchy)
+                icm_soft_result = icm_soft.evaluate()
+                ## Add results to base_metrics
+                base_metrics['icm_soft'] = icm_soft_result
+        
+            return base_metrics
+    
+    def load_trainer(self, model, tokenized_dataset, data_collator, compute_metrics_function):
+        if self.training_mode == 'hard':      
+            return super().load_trainer(model, tokenized_dataset, data_collator, compute_metrics_function)
+        else:
+            class DisagreementSoftTrainer(Trainer):
+                def compute_loss(self, model, inputs, return_outputs=False):
+                    labels = inputs.pop("labels")
+                    outputs = model(**inputs)
+                    logits = outputs.logits
+                    loss_fct = BCEWithLogitsLoss()
+                    # loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1, self.model.config.num_labels))
+                    loss = loss_fct(logits, labels.float())  # Ensure labels are float for BCEWithLogitsLoss
+                    return (loss, outputs) if return_outputs else loss
+                
+            training_args = TrainingArguments(
+                output_dir=self.output_dir,
+                run_name=self.output_dir,
+                overwrite_output_dir=True,
+                **self.model_config['hf_parameters']
+            )
+
+            trainer = DisagreementSoftTrainer(
+                model=model,
+                args=training_args,
+                train_dataset=tokenized_dataset["train"],
+                eval_dataset=tokenized_dataset["val"],
+                tokenizer=self.tokenizer,
+                data_collator=data_collator,
+                compute_metrics=compute_metrics_function,
+            )
+            return trainer

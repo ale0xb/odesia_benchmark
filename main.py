@@ -7,18 +7,40 @@ from odesia_evaluate_model import odesia_benchmark
 
 def main():
 
+    # Ensure csv folder exists
+    if not os.path.exists('csvs'):
+        os.makedirs('csvs')
+
+    # Ensure report.json exists. If not, create it with an empty list
+    if not os.path.exists('./report.json'):
+        with open('report.json', 'w') as f:
+            f.write('[]')
+    
+    
     LARGE = ['PlanTL-GOB-ES/roberta-large-bne', 'xlm-roberta-large', 'xlm-roberta-base', 'roberta-large', 'bert-base-multilingual-cased','bert-base-cased',]
     
-    language_models = {'en':[ 'distilbert-base-uncased', 'roberta-base', 'roberta-large', 
-                               'distilbert-base-multilingual-cased', 'bert-base-cased', 'bert-base-multilingual-cased',
-                              #'ixa-ehu/ixambert-base-cased',  'xlm-roberta-large', 
-                              'xlm-roberta-base',                                                
-                             ],
-                             'es':['PlanTL-GOB-ES/roberta-base-bne','PlanTL-GOB-ES/roberta-large-bne','bertin-project/bertin-roberta-base-spanish',  
-                             'distilbert-base-multilingual-cased', 'CenIA/distillbert-base-spanish-uncased',  
-                              'dccuchile/bert-base-spanish-wwm-cased', 'bert-base-multilingual-cased', 
-                              # 'ixa-ehu/ixambert-base-cased',  'xlm-roberta-large',
-                              'xlm-roberta-base',                      
+    language_models = {'en':[ 
+                            'distilbert-base-uncased', 
+                            'roberta-base', 
+                            'roberta-large', 
+                            'distilbert-base-multilingual-cased', 
+                            'bert-base-cased', 
+                            'bert-base-multilingual-cased',
+                            'ixa-ehu/ixambert-base-cased', 
+                            'xlm-roberta-large', 
+                            'xlm-roberta-base',                                                
+                            ],
+                        'es':[
+                            'PlanTL-GOB-ES/roberta-base-bne',
+                            'PlanTL-GOB-ES/roberta-large-bne',
+                            'bertin-project/bertin-roberta-base-spanish',  
+                            'distilbert-base-multilingual-cased',
+                            'CenIA/distillbert-base-spanish-uncased',  
+                            'dccuchile/bert-base-spanish-wwm-cased', 
+                            'bert-base-multilingual-cased', 
+                            'ixa-ehu/ixambert-base-cased', 
+                            'xlm-roberta-large',
+                            'xlm-roberta-base',                      
                         ],
                         
                     
@@ -53,9 +75,21 @@ def main():
             odesia_benchmark(model=model, 
                              language=language, 
                              grid_search=hparams_to_search, 
-                             datasets_to_eval=['diann_2023']
+                             datasets_to_eval=[
+                                #  'dipromats_2023_t2',
+                                #  'dipromats_2023_t3',
+                                #  'exist_2023_t1_hard_hard',
+                                 'exist_2023_t1_hard_soft',
+                                #  'exist_2023_t1_soft_soft',
+                                #  'exist_2023_t2_hard_hard',
+                                 'exist_2023_t2_hard_soft',
+                                #  'exist_2023_t2_soft_soft',
+                                #  'exist_2023_t3_hard_hard',
+                                 'exist_2023_t3_hard_soft',
+                                #  'exist_2023_t3_soft_soft',
+                            ]
             )
-                        
+                      
 
             # calculamos el tiempo de esta ejecucion
             iteration_time = time.time() - start_time
