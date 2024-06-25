@@ -36,87 +36,28 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
 
     def __init__(self, model_path, dataset_path, model_config, dataset_config):
         super().__init__(model_path, dataset_path, model_config, dataset_config)
-               
-        # Step 1. Load DataCollator            
+        
+        # Load DataCollator
         self.data_collator = DataCollatorForTokenClassification(tokenizer=self.tokenizer)
         
-        # Step 2. Tokenized the dataset
-        if not self.tokenized_dataset:           
-            self.tokenized_dataset = self.dataset.map(self.tokenize_and_align_labels, batched=True)
+        # Tokenize the dataset
+        if not self.tokenized_dataset:
+            self.tokenized_dataset = self.dataset.map(self.tokenize_and_align_labels, batched=False)
             self.tokenized_dataset.save_to_disk(self.dataset_path_tokenized)
-           
-        # Step 3. Loading model, trainer and metrics
+        
+        # Load model, trainer, and metrics
         self.seqeval = evaluate.load("seqeval")
-
         self.model = AutoModelForTokenClassification.from_pretrained(
             self.model_path, num_labels=self.num_labels, id2label=self.id2label, label2id=self.label2id
-        )        
-
+        )
+        
         self.trainer = self.load_trainer(model=self.model, 
                                          data_collator=self.data_collator, 
                                          tokenized_dataset=self.tokenized_dataset, 
                                          compute_metrics_function=self.compute_metrics)
-        
+        self.label2id = self.model.config.label2id
+        self.id2label = self.model.config.id2label
 
-        
-    def tokenize_and_align_labels_bugeada(self, examples):
-        tokenized_inputs = self.tokenizer(examples["tokens"], 
-                                          is_split_into_words=True, 
-                                          padding='max_length', 
-                                          truncation=True, 
-                                          max_length=self.tokenizer.model_max_length,
-                                          return_tensors="pt")
-        labels = []
-        for i, label in enumerate(examples[f"ner_tags_index"]):
-            word_ids = tokenized_inputs.word_ids(batch_index=i)  # Map tokens to their respective word.
-            previous_word_idx = None
-            label_ids = []
-            for word_idx in word_ids:  # Set the special tokens to -100.
-                if word_idx is None:
-                    label_ids.append(-100)
-                elif word_idx != previous_word_idx:  # Only label the first token of a given word.
-                    label_ids.append(label[word_idx])
-                else:
-                    label_ids.append(-100)
-                previous_word_idx = word_idx
-            label_ids = label_ids
-            labels.append(label_ids)
-
-        tokenized_inputs["labels"] = labels
-
-        return tokenized_inputs
-    
-    def tokenize_and_align_labels(self, examples, label_all_tokens=True):
-        texts = examples["tokens"]  
-        tags = examples["ner_tags"] 
-        tokenized_inputs = self.tokenizer(texts,
-                                    is_split_into_words=True,
-                                    # return_offsets_mapping=True,
-                                    padding=True, truncation=True)
-        if tags is not None:
-            raw_labels = [[self.label2id[tag] for tag in doc] for doc in tags]
-            labels = []
-            for i, raw_label in enumerate(raw_labels):
-                word_ids = tokenized_inputs.word_ids(batch_index=i)
-                previous_word_idx = None
-                label = []
-                for word_idx in word_ids:
-                    # Special tokens have a word id that is None. We set the label to -100 so they are automatically
-                    # ignored in the loss function.
-                    if word_idx is None:
-                        label.append(-100)
-                    # We set the label for the first token of each word.
-                    elif word_idx != previous_word_idx:
-                        label.append(raw_label[word_idx])
-                    # For the other tokens in a word, we set the label to either the current label or -100, depending on
-                    # the label_all_tokens flag.
-                    else:
-                        label.append(raw_label[word_idx] if label_all_tokens else -100)
-                    previous_word_idx = word_idx
-                labels.append(label)
-            tokenized_inputs["labels"] = labels
-        return tokenized_inputs
-    
     def compute_metrics(self, p):
         predictions, labels = p
         predictions = np.argmax(predictions, axis=2)
@@ -137,74 +78,132 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
             "f1": results["overall_f1"],
             "accuracy": results["overall_accuracy"],
         }
-    
-    def predict(self, split="test"):
-        results = []
-        input_ner = self.tokenized_dataset[split].select(range(30))
-        print(input_ner[0])
-        p = self.trainer.predict(input_ner)
 
-        predictions, labels = p.predictions, p.label_ids
+    def tokenize_and_align_labels(self, example, label_all_tokens=True):
+        texts = example["tokens"]
+        tags = example.get("ner_tags", None)
+        
+        tokenized_inputs = self.tokenizer(
+            texts,
+            is_split_into_words=True,
+            padding='max_length',  # Añade padding hasta la longitud máxima
+            truncation=True,
+            return_offsets_mapping=True
+        )
+
+        word_ids = tokenized_inputs.word_ids()
+
+        if tags is not None:
+            raw_labels = [self.label2id.get(tag, -100) for tag in tags]
+            labels = []
+            previous_word_idx = None
+            for word_idx in word_ids:
+                if word_idx is None:
+                    labels.append(-100)
+                elif word_idx != previous_word_idx:
+                    labels.append(raw_labels[word_idx])
+                else:
+                    labels.append(raw_labels[word_idx] if label_all_tokens else -100)
+                previous_word_idx = word_idx
+            tokenized_inputs["labels"] = labels
+
+        tokenized_inputs.pop("offset_mapping")
+        tokenized_inputs["original_tokens"] = texts
+        tokenized_inputs["word_ids"] = word_ids
+
+        return tokenized_inputs
+
+    def predict(self, split="test", examples=30):
+        dataset_split = self.tokenized_dataset[split]
+        dataset_subset = dataset_split#.select(range(min(len(dataset_split), examples)))
+        
+        predictions, labels, _ = self.trainer.predict(dataset_subset)
+        
         predictions = np.argmax(predictions, axis=2)
+        aligned_predictions = []
 
-        true_predictions = [
-            [self.label_list[p] for p in prediction]
-            for prediction in predictions
-        ]
-      
+        for i, example in enumerate(dataset_subset):
+            tokens = example['original_tokens']
+            word_ids = example['word_ids']
+            predicted_labels = [self.label_list[p] for p in predictions[i]]
+            aligned_tokens = []
+            aligned_labels = []
+            previous_word_idx = None
 
-        for input, true_prediction in zip(self.dataset[split], true_predictions): 
-            if not true_prediction:
-                true_prediction = [""]
-            result = {"test_case": self.test_case,
-                            "id": input["id"],
-                            "ner_tags": list(true_prediction)}
+            for idx, word_idx in enumerate(word_ids):
+                if word_idx is None or word_idx == previous_word_idx:
+                    continue
+                aligned_tokens.append(tokens[word_idx])
+                aligned_labels.append(predicted_labels[idx])
+                previous_word_idx = word_idx
             
-            results.append(result)
-        return true_predictions
+            aligned_tokens, aligned_labels = self.adjust_alignment(tokens, aligned_tokens, aligned_labels)
+
+            def list_difference(list1, list2):
+                set1 = set(list1)
+                set2 = set(list2)
+                
+                difference1 = set1 - set2  # Elementos en list1 pero no en list2
+                difference2 = set2 - set1  # Elementos en list2 pero no en list1
+                
+                return list(difference1), list(difference2)
+
+            # Verificación de longitud
+            if len(aligned_tokens) != len(tokens):
+                print(f"Error en el alineamiento: {tokens}")
+                print(f"Tokens alineados: {aligned_tokens}")
+                print(f"Etiquetas alineadas: {aligned_labels}")
+                raise ValueError(f"Mismatch in lengths: {len(tokens)} tokens vs {len(aligned_tokens)} tokens")
+
+            
+            # Verificar que las longitudes de tokens y etiquetas sean iguales
+            if len(aligned_tokens) != len(aligned_labels):
+                raise ValueError(f"Mismatch in lengths: {len(aligned_tokens)} tokens vs {len(aligned_labels)} labels")
+
+            aligned_predictions.append({
+                'id': example['id'],
+                'ner_tags': aligned_labels,
+                'tokens': aligned_tokens
+            })
+
+        # Verificar que el número de predicciones y referencias sea igual
+        if len(aligned_predictions) != len(dataset_subset):
+            raise ValueError(f"Mismatch in number of predictions: {len(aligned_predictions)} vs references: {len(dataset_subset)}")
+
+        return aligned_predictions
     
-    def predict_evall_format(self, split="test"):
-        inputs = self.dataset[split].select(range(30))
-        classifier = pipeline("ner", model=self.model.to('cpu'), tokenizer=self.tokenizer)
-       
-        results = []
-        for input in inputs:
-            input_tokens = input['tokens']
-            ner_tags = [None for _ in input_tokens]
-            ner_tags_index = [None for _ in input_tokens]
-
-            text = ' '.join(input_tokens)
-            classifier_outputs = classifier(text)
-            # si clasifica los tokens
-            if classifier_outputs:
-                # para ese ejemplo vamos token por token
-                for classifier_output in classifier_outputs:
-                    # sacamos la palabra clasificada
-                    start = classifier_output["start"]
-                    end = classifier_output["start"]+len(classifier_output["word"].replace("##", ""))
-                    tag = classifier_output["entity"]
-                    token_result = text[start:end]
+    def adjust_alignment(self, tokens, aligned_tokens, aligned_labels):
+        idx_orig = 0
+        idx_aligned = 0
+        
+        while idx_orig < len(tokens) and idx_aligned < len(aligned_tokens):
+            if tokens[idx_orig] != aligned_tokens[idx_aligned]:
+                # Identificar si se está entre B-algo e I-algo
+                if idx_aligned > 0 and idx_aligned < len(aligned_labels) - 1:
+                    prev_label = aligned_labels[idx_aligned - 1]
+                    next_label = aligned_labels[idx_aligned]
                     
-                    for i, input_token in enumerate(input_tokens):
-                        if token_result == input_token:
-                            ner_tags[i] = tag
-                            ner_tags_index[i] = self.label2id[tag]
+                    if prev_label.startswith('B-') and next_label.startswith('I-') and prev_label[2:] == next_label[2:]:
+                        aligned_tokens.insert(idx_aligned, tokens[idx_orig])
+                        aligned_labels.insert(idx_aligned, f'I-{prev_label[2:]}')
+                    else:
+                        aligned_tokens.insert(idx_aligned, tokens[idx_orig])
+                        aligned_labels.insert(idx_aligned, 'O')
+                else:
+                    aligned_tokens.insert(idx_aligned, tokens[idx_orig])
+                    aligned_labels.insert(idx_aligned, 'O')
+            
+            idx_orig += 1
+            idx_aligned += 1
+        
+        # Añadir los tokens y etiquetas restantes
+        while idx_orig < len(tokens):
+            aligned_tokens.append(tokens[idx_orig])
+            aligned_labels.append('O')
+            idx_orig += 1
 
-                ner_tags = [ner_tag if ner_tag else 'O' for ner_tag in ner_tags]
-                ner_tags_index = [ner_tag_index if ner_tag_index else self.label2id['O'] for ner_tag_index in ner_tags_index]
+        return aligned_tokens, aligned_labels
 
-
-
-                result = {"test_case": self.test_case,
-                        "id":input["id"],
-                        "classifier_output": classifier_outputs,
-                        "gold_ner_tags" : input["ner_tags"],
-                        "gold_tokens" : input['tokens'],
-                        "ner_tags":ner_tags, 
-                        "ner_tags_index":ner_tags_index}
-                                               
-                results.append(result)   
-        return {split:results}
     
     
     
