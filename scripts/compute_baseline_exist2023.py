@@ -201,7 +201,7 @@ def compute_hard_baseline(task, language):
         df_test_hard_hard['predicted_label'] = [list(p) for p in y_pred.numpy()]
         df_test_hard_hard['predicted_label'] = df_test_hard_hard['predicted_label'].apply(lambda x: [i for i,v in enumerate(x) if v>0])
         df_test_hard_hard['value'] = df_test_hard_hard['predicted_label'].apply(lambda x: [TASK_LABEL_MAP[task][i] for i in x])
-        df_labels = df_test_hard_hard[['id', LABEL_VALUE]].rename(columns={LABEL_VALUE: 'value'})
+        df_labels = df_test_hard_hard[['id', 'label_task3']].rename(columns={'label_task3': 'value'})
         df_labels['value'] = df_labels['value'].apply(lambda x: [TASK_LABEL_MAP[task][i] for i in x])
 
     # First, ICM Hard
@@ -270,6 +270,7 @@ def train_model_hard(X_train, y_train, task):
                 loss = loss_function(outputs, labels)
             loss.backward()
             optimizer.step()
+        print(f'Epoch {epoch+1}, Loss: {loss.item()}')
     return model
     
 
@@ -287,7 +288,7 @@ def compute_soft_baseline(task, language):
     X_train_soft = vectorizer.fit_transform(df_train_soft['text_clean']).toarray()
     X_test_soft = vectorizer.transform(df_test_soft_soft['text_clean']).toarray()
 
-    df_train_soft['soft_label'] = df_train_soft['label'].apply(TASK_LAMBDAS[2][task])  
+    df_train_soft['soft_label'] = df_train_soft['label']
     y_train_soft = df_train_soft['soft_label']
 
     # Train the model
@@ -309,7 +310,7 @@ def compute_soft_baseline(task, language):
     df_test_soft_soft['pred_probs'] = df_test_soft_soft['pred_probs'].apply(TASK_LAMBDAS[0][task])
     # Convert soft label column dictionaries
 
-    df_test_soft_soft['soft_label'] = df_test_soft_soft['label'].apply(TASK_LAMBDAS[1][task])
+    df_test_soft_soft['soft_label'] = df_test_soft_soft['label'].apply(TASK_LAMBDAS[0][task])
     
     icm_soft = ICM_Soft(df_test_soft_soft[['id', 'pred_probs']].rename(columns={'pred_probs':'value'}),
     df_test_soft_soft[['id', 'soft_label']].rename(columns={'soft_label': 'value'}), TASK_TYPES[task], TASK_HIERARCHIES[task])
@@ -329,9 +330,9 @@ def main():
                 icm_results_hard = compute_hard_baseline(task, language)
                 icm_results_soft = compute_soft_baseline(task, language)
 
-                results[f'{task}_hard_hard_{language}'] = icm_results_hard['icm_hard']
-                results[f'{task}_hard_soft_{language}'] = icm_results_hard['icm_soft']
-                results[f'{task}_soft_soft_{language}'] = icm_results_soft['icm_soft']
+                results[f'{task}-hard_hard-{language}'] = icm_results_hard['icm_hard']
+                results[f'{task}-hard_soft-{language}'] = icm_results_hard['icm_soft']
+                results[f'{task}-soft_soft-{language}'] = icm_results_soft['icm_soft']
                 
         # Add run identifier
         results['run'] = run
