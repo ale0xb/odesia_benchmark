@@ -2,8 +2,10 @@ venv
 datasets
 trained_models
 csvs
+preds
 __pycache__
 .ipynb_checkpoints
 __MACOSX
 report.json
-scripts/EXIST_2023_Shared_Task
+preds.zip
+scripts/EXIST_2023_Shared_Task*

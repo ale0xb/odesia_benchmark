@@ -342,6 +342,36 @@ class OdesiaTextClassificationWithDisagreements(OdesiaTextClassification):
             compute_metrics_function=self.compute_metrics
         )
 
+    def convert_predictions(self, pred):
+        if 'multi_class_classification' in self.problem_type:
+            predictions = np.argmax(pred.predictions, axis=-1)
+        elif 'multi_label_classification' in self.problem_type:
+            probs = 1 / (1 + np.exp(-pred.predictions))
+            predictions = (probs > 0.5).astype(int)
+        else:
+            raise ValueError(f"Problem type {self.problem_type} not supported")
+        return predictions
+    
+    def predict(self, split="test"):
+        results = []
+        dataset = self.tokenized_dataset[split]
+        pred = self.trainer.predict(dataset) 
+        if self.exist_task == 'multi_label':
+            probs = 1 / (1 + np.exp(-pred.predictions))
+        else:
+            # Apply softmax to the predictions only if we are in monolabel 
+            probs = np.exp(pred.predictions) / np.exp(pred.predictions).sum(-1, keepdims=True)
+        predictions = probs
+        for i, prediction in enumerate(predictions):
+            predicted_labels = {self.id2label[j]: label_id for j, label_id in enumerate(prediction)}
+            result = {
+                'test_case': self.test_case,
+                'id': dataset[i]['id'],
+                'value': predicted_labels
+            }
+            results.append(result)
+        return {split: results}
+
     def compute_metrics(self, pred):
         if self.training_mode == 'soft': # Only compute the icm_soft
             labels = pred.label_ids

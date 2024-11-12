@@ -102,7 +102,7 @@ DATASETS = [{'name' : 'dipromats_2023_t1',
                                             'sexist':1},
                                 "label_column":"label_text",
                                 "hierarchy": None,
-                                "exist_task": "multi_label",
+                                "exist_task": "mono_label",
                                 "training_mode": "soft",
                                 "eval_mode": "soft"                              
                                 }
