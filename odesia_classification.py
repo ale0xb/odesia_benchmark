@@ -7,6 +7,7 @@ from transformers import AutoModelForTokenClassification, DataCollatorForTokenCl
 from transformers import AutoModelForSequenceClassification, DataCollatorWithPadding
 from transformers import pipeline
 from transformers import Trainer, TrainingArguments
+from peft import LoraConfig, get_peft_model
 
 from torch.nn import BCEWithLogitsLoss
 
@@ -112,7 +113,7 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
         tokenized_inputs["word_ids"] = word_ids
 
         return tokenized_inputs
-
+    
     def predict(self, split="test", examples=30):
         dataset_split = self.tokenized_dataset[split]
         dataset_subset = dataset_split#.select(range(min(len(dataset_split), examples)))
@@ -232,15 +233,35 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
         if not self.tokenized_dataset:
             if 'multi_label_classification' not in self.problem_type:
                 self.dataset = self.dataset.cast_column('label', ClassLabel(names=self.label_list))
-            self.tokenized_dataset = self.dataset.map(lambda ex: self.tokenizer(ex["text"], truncation=True, padding=True), batched=True)
+            # Check if tokenizer has max_length
+            if 'max_length' not in self.tokenizer.model_input_names:
+                self.tokenized_dataset = self.dataset.map(lambda ex: self.tokenizer(ex["text"], truncation=True, padding='max_length', max_length=64), batched=True)
+            else:
+                self.tokenized_dataset = self.dataset.map(lambda ex: self.tokenizer(ex["text"], truncation=True, padding='max_length'), batched=True)
             self.tokenized_dataset.save_to_disk(self.dataset_path_tokenized)
+    
+    def convert_model_to_PEFT(self, model):
+        lora_config = LoraConfig(**self.peft_parameters)
+        model = get_peft_model(model, lora_config)
+        model.config.pretraining_tp = 1
+        model.config.pad_token_id = self.tokenizer.pad_token_id
+        return model
     
     def initialize_model(self):
         self.model = AutoModelForSequenceClassification.from_pretrained(
-            self.model_path, 
-            num_labels=self.num_labels, 
-            problem_type='multi_label_classification' if 'multi_label_classification' in self.problem_type else None
-        )
+                self.model_path, 
+                num_labels=self.num_labels, 
+                torch_dtype="auto",
+                device_map="cuda:0",
+                problem_type='multi_label_classification' if 'multi_label_classification' in self.problem_type else None
+            )
+        
+        if self.peft_parameters:
+            ## This is a PEFT model 
+            self.model = self.convert_model_to_PEFT(self.model)
+
+            
+
 
     def setup_trainer(self):
         self.trainer = self.load_trainer(
@@ -326,14 +347,6 @@ class OdesiaTextClassificationWithDisagreements(OdesiaTextClassification):
         else: # Resort to the parent class method
             super().tokenize_dataset()
     
-    def initialize_model(self):
-        self.model = AutoModelForSequenceClassification.from_pretrained(
-            self.model_path, 
-            num_labels=self.num_labels,
-            # Set problem type to multi_label_classification if we are using soft training mode
-            problem_type='multi_label_classification' if ('multi_label_classification' in self.problem_type or self.training_mode=='soft') else None
-        )
-
     def setup_trainer(self):
         self.trainer = self.load_trainer(
             model=self.model, 

@@ -279,7 +279,34 @@ GENERIC_MODEL_CONFIG = {
                 'num_train_epochs': 5,
                 'evaluation_strategy':"no",
                 'save_strategy':"no",
+                # 'logging_steps': 1,
                 #'fp16': True,
                 'load_best_model_at_end':True}
+}
+
+PEFT_MODEL_CONFIG = {
+        "output_dir" : "",
+        "hf_parameters": {
+                'per_device_train_batch_size': 8,
+                'per_device_eval_batch_size' : 4,
+                'num_train_epochs': 1,
+                'evaluation_strategy':"no",
+                # 'eval_strategy' : 'epoch',
+                # 'save_strategy':"epoch",
+                'weight_decay' : 0.01,
+                'warmup_ratio' : 0.1,
+                # 'logging_steps': 1,
+                'report_to':"none",     
+                'bf16': True,
+                'save_strategy':"no",
+                'load_best_model_at_end':True},
+        "peft_parameters": {
+                'r': 16, 
+                'lora_alpha': 8,
+                'target_modules': ['q_proj', 'k_proj', 'v_proj', 'o_proj'],
+                'lora_dropout': 0.05, 
+                'bias': 'none',
+                'task_type': 'SEQ_CLS'
+        }       
 }
 

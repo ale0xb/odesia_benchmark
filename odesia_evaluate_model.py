@@ -6,7 +6,7 @@ from generate_csv import generate_csv_from_report
 from odesia_classification import OdesiaTextClassification, OdesiaTokenClassification, OdesiaTextClassificationWithDisagreements
 from odesia_qa import OdesiaQuestionAnswering
 from odesia_sentence_similarity import OdesiaSentenceSimilarity
-from odesia_configs import DATASETS, GENERIC_MODEL_CONFIG
+from odesia_configs import DATASETS, GENERIC_MODEL_CONFIG, PEFT_MODEL_CONFIG
 from odesia_utils import compose_dataset_path, compose_output_dir, create_directories, create_grid, get_documents_in_folder, save_json
 import time
 import datetime
@@ -22,8 +22,11 @@ warnings.filterwarnings("ignore", category=UserWarning)
 #logging.set_verbosity_warning()
 #logging.set_verbosity_error()
 
-
-def odesia_benchmark(model : str, language="es", grid_search : dict = None, datasets_to_eval : list = []):
+def odesia_benchmark(model : str, 
+                     language="es", 
+                     grid_search : dict = None, 
+                     datasets_to_eval : list = [],
+                     is_peft_model : bool = False):
     
     grid = create_grid(grid_search)
     datasets_len = len(datasets_to_eval) if datasets_to_eval else len(DATASETS)
@@ -46,7 +49,8 @@ def odesia_benchmark(model : str, language="es", grid_search : dict = None, data
                 start_time = time.time()
 
                 # cargamos los diccionarios con la config del modelo y creamos las carpetas donde lo almacenaremos
-                model_config = copy.copy(GENERIC_MODEL_CONFIG)
+                model_config = copy.deepcopy(PEFT_MODEL_CONFIG) if is_peft_model else copy.deepcopy(GENERIC_MODEL_CONFIG)
+                
                 model_config['output_dir'] = compose_output_dir(dataset_name, model, hparams, language)                
                 create_directories(model_config['output_dir'])
                 

@@ -44,9 +44,10 @@ class OdesiaHFModel(OdesiaAbstractModel):
         self.dataset_path = dataset_path        
         self.output_dir = self.model_config['output_dir']
         self.test_case = self.dataset_config['evall_test_case']
-        self.problem_type = self.dataset_config['problem_type']        
+        self.problem_type = self.dataset_config['problem_type']
+        # Assign dataset_config.peft_parameters if they exist
+        self.peft_parameters = self.model_config.get('peft_parameters', None)      
         # Tokenizer
-        
         
         # Load dataset if it was tokenized before
         self.dataset = load_dataset('json', data_files=dataset_path)   
@@ -65,6 +66,10 @@ class OdesiaHFModel(OdesiaAbstractModel):
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(model_path, add_prefix_space=True) 
             self.tokenized_dataset = None
+        
+        if self.peft_parameters is not None: # This is a PEFT model (e.g. Llama3-8B)
+            self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
+            self.tokenizer.pad_token = self.tokenizer.eos_token
 
     def load_trainer(self, model, tokenized_dataset, data_collator, compute_metrics_function):        
         
@@ -80,7 +85,7 @@ class OdesiaHFModel(OdesiaAbstractModel):
             args=training_args,
             train_dataset=tokenized_dataset["train"],
             eval_dataset=tokenized_dataset["val"],
-            tokenizer=self.tokenizer,
+            # tokenizer=self.tokenizer,
             data_collator=data_collator,
             compute_metrics=compute_metrics_function,
         )

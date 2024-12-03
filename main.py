@@ -20,31 +20,40 @@ def main():
     LARGE = ['PlanTL-GOB-ES/roberta-large-bne', 'xlm-roberta-large', 'xlm-roberta-base', 'roberta-large', 'bert-base-multilingual-cased','bert-base-cased',]
     
     language_models = {'en':[ 
-                            'distilbert-base-uncased', 
-                            'roberta-base', 
-                            'roberta-large', 
-                            'distilbert-base-multilingual-cased', 
-                            'bert-base-cased', 
-                            'bert-base-multilingual-cased',
-                            'ixa-ehu/ixambert-base-cased', 
-                            'xlm-roberta-large', 
-                            'xlm-roberta-base',                                                
+                            # 'distilbert-base-uncased', 
+                            # 'roberta-base', 
+                            # 'roberta-large', 
+                            # 'distilbert-base-multilingual-cased', 
+                            # 'bert-base-cased', 
+                            # 'bert-base-multilingual-cased',
+                            # 'ixa-ehu/ixambert-base-cased', 
+                            # 'xlm-roberta-large', 
+                            # 'xlm-roberta-base',
+                            'meta-llama/Meta-Llama-3-8B'                                                
                             ],
                         'es':[
-                            'PlanTL-GOB-ES/roberta-base-bne',
-                            'PlanTL-GOB-ES/roberta-large-bne',
-                            'bertin-project/bertin-roberta-base-spanish',  
-                            'distilbert-base-multilingual-cased',
-                            'CenIA/distillbert-base-spanish-uncased',  
-                            'dccuchile/bert-base-spanish-wwm-cased', 
-                            'bert-base-multilingual-cased', 
-                            'ixa-ehu/ixambert-base-cased', 
-                            'xlm-roberta-large',
-                            'xlm-roberta-base',                      
-                        ],
-                        
-                    
+                            # 'PlanTL-GOB-ES/roberta-base-bne',
+                            # 'PlanTL-GOB-ES/roberta-large-bne',
+                            # 'bertin-project/bertin-roberta-base-spanish',  
+                            # 'distilbert-base-multilingual-cased',
+                            # 'CenIA/distillbert-base-spanish-uncased',  
+                            # 'dccuchile/bert-base-spanish-wwm-cased', 
+                            # 'bert-base-multilingual-cased', 
+                            # 'ixa-ehu/ixambert-base-cased', 
+                            # 'xlm-roberta-large',
+                            # 'xlm-roberta-base',
+                            'meta-llama/Meta-Llama-3-8B'                      
+                        ],   
             }
+
+    PEFT_MODELS = ["meta-llama/Meta-Llama-3-8B"]
+
+    hparams_to_search_peft = {
+            'per_device_train_batch_size' : [8],
+            'gradient_accumulation_steps' : [4, 2],
+            'learning_rate': [1e-4, 3e-4, 5e-4],
+            'weight_decay': [0.1, 0.01]
+    }
 
     hparams_to_search_small = {
             'per_device_train_batch_size' : [32, 16],
@@ -66,8 +75,9 @@ def main():
         for model in language_models[language]:                        
 
             start_time = time.time()
-
-            if model in LARGE:
+            if model in PEFT_MODELS:
+                hparams_to_search = copy.deepcopy(hparams_to_search_peft)
+            elif model in LARGE or model in PEFT_MODELS:
                 hparams_to_search = copy.deepcopy(hparams_to_search_large)
             else:
                 hparams_to_search = copy.deepcopy(hparams_to_search_small)
@@ -78,16 +88,18 @@ def main():
                              datasets_to_eval=[
                                 #  'dipromats_2023_t2',
                                 #  'dipromats_2023_t3',
-                                #  'exist_2023_t1_hard_hard',
-                                 'exist_2023_t1_hard_soft',
+                                'exist_2022_t1',
+                                # 'exist_2023_t1_hard_hard',
+                                #  'exist_2023_t1_hard_soft',
                                 #  'exist_2023_t1_soft_soft',
                                 #  'exist_2023_t2_hard_hard',
-                                 'exist_2023_t2_hard_soft',
+                                #  'exist_2023_t2_hard_soft',
                                 #  'exist_2023_t2_soft_soft',
                                 #  'exist_2023_t3_hard_hard',
-                                 'exist_2023_t3_hard_soft',
+                                #  'exist_2023_t3_hard_soft',
                                 #  'exist_2023_t3_soft_soft',
-                            ]
+                            ],
+                            is_peft_model=model in PEFT_MODELS,
             )
                       
 
