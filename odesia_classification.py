@@ -491,7 +491,7 @@ class OdesiaTextClassificationWithDisagreements(OdesiaTextClassification):
             return super().load_trainer(model, tokenized_dataset, data_collator, compute_metrics_function)
         else:
             class DisagreementSoftTrainer(Trainer):
-                def compute_loss(self, model, inputs, return_outputs=False):
+                def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
                     labels = inputs.pop("labels")
                     outputs = model(**inputs)
                     logits = outputs.logits
