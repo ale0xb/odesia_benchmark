@@ -5,7 +5,7 @@ DATASETS = [{'name' : 'dipromats_2023_t1',
                                'problem_type':'multi_class_classification',
                                 "label2id":{'non-propaganda':0,
                                             'propaganda':1},
-                               'label_column':'label_text',
+                               'label_column':'label_task1_hf',
                                }
              },            
             

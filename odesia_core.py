@@ -80,6 +80,20 @@ class OdesiaHFModel(OdesiaAbstractModel):
             **self.model_config['hf_parameters']
         )
 
+        # def compute_class_weights(dataset):
+        #     labels = [example['label'] for example in dataset]
+        #     class_counts = torch.bincount(torch.tensor(labels))
+        #     class_weights = class_counts / class_counts.sum()
+        #     return class_weights
+
+        # # Compute class weights
+        # class_weights = compute_class_weights(tokenized_dataset["train"]).to('cuda:0')
+
+        # def compute_loss(outputs, labels, num_items_in_batch='None'):
+        #     logits = outputs.logits
+        #     loss_fct = torch.nn.CrossEntropyLoss(weight=class_weights)
+        #     return loss_fct(logits.view(-1, model.config.num_labels), labels.view(-1))
+
         trainer = Trainer(
             model=model,
             args=training_args,

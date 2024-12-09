@@ -21,8 +21,6 @@ import pandas as pd
 from vendor.exist2023evaluation import ICM_Hard, ICM_Soft
 
 
-
-
 class OdesiaUniversalClassification(OdesiaHFModel):
     def __init__(self, model_path, dataset_path, model_config, dataset_config):
         super().__init__(model_path, dataset_path, model_config, dataset_config)
@@ -261,8 +259,6 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
             self.model = self.convert_model_to_PEFT(self.model)
 
             
-
-
     def setup_trainer(self):
         self.trainer = self.load_trainer(
             model=self.model, 
@@ -339,10 +335,22 @@ class OdesiaTextClassificationWithDisagreements(OdesiaTextClassification):
             
             if not self.tokenized_dataset:
                 # self.dataset = self.dataset.map(preprocess_labels, batched=False)  # Ensure labels are processed
-                self.tokenized_dataset = self.dataset.map(
-                    lambda ex: self.tokenizer(ex["text"], truncation=True, padding=True), 
-                    batched=True
-                )
+                if 'max_length' not in self.tokenizer.model_input_names:
+                    self.tokenized_dataset = self.dataset.map(
+                        lambda ex: self.tokenizer(ex["text"], 
+                                                  truncation=True, 
+                                                  padding=True, 
+                                                  return_tensors="pt", 
+                                                  max_length=64), 
+                        batched=True
+                    )
+                else:
+                    self.tokenized_dataset = self.dataset.map(
+                        lambda ex: self.tokenizer(ex["text"], 
+                                                  truncation=True, 
+                                                  padding='max_length'), 
+                        batched=True
+                    )
                 self.tokenized_dataset.save_to_disk(self.dataset_path_tokenized)
         else: # Resort to the parent class method
             super().tokenize_dataset()
