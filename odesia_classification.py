@@ -20,6 +20,7 @@ import pandas as pd
 
 from vendor.exist2023evaluation import ICM_Hard, ICM_Soft
 
+from odesia_configs import PEFT_TASK_MAPPING
 
 class OdesiaUniversalClassification(OdesiaHFModel):
     def __init__(self, model_path, dataset_path, model_config, dataset_config):
@@ -30,6 +31,14 @@ class OdesiaUniversalClassification(OdesiaHFModel):
         self.id2label = {v: k for k, v in self.label2id.items()}
         self.label_list = list(self.label2id.keys())
         self.num_labels = len(dataset_config['label2id'])
+    
+    def convert_model_to_PEFT(self, model):
+        lora_config = LoraConfig(**self.peft_parameters)
+        lora_config.task_type = PEFT_TASK_MAPPING[self.problem_type]
+        model = get_peft_model(model, lora_config)
+        model.config.pretraining_tp = 1
+        model.config.pad_token_id = self.tokenizer.pad_token_id
+        return model
 
 class OdesiaTokenClassification(OdesiaUniversalClassification):
 
@@ -231,19 +240,13 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
         if not self.tokenized_dataset:
             if 'multi_label_classification' not in self.problem_type:
                 self.dataset = self.dataset.cast_column('label', ClassLabel(names=self.label_list))
-            # Check if tokenizer has max_length
-            if 'max_length' not in self.tokenizer.model_input_names:
-                self.tokenized_dataset = self.dataset.map(lambda ex: self.tokenizer(ex["text"], truncation=True, padding='max_length', max_length=64), batched=True)
+            # Check if tokenizer is from a PEFT model 
+            if self.peft_parameters: 
+                self.tokenized_dataset = self.dataset.map(lambda ex: self.tokenizer(ex["text"], truncation=True, padding=True, max_length=64), batched=True)
             else:
                 self.tokenized_dataset = self.dataset.map(lambda ex: self.tokenizer(ex["text"], truncation=True, padding='max_length'), batched=True)
+        
             self.tokenized_dataset.save_to_disk(self.dataset_path_tokenized)
-    
-    def convert_model_to_PEFT(self, model):
-        lora_config = LoraConfig(**self.peft_parameters)
-        model = get_peft_model(model, lora_config)
-        model.config.pretraining_tp = 1
-        model.config.pad_token_id = self.tokenizer.pad_token_id
-        return model
     
     def initialize_model(self):
         self.model = AutoModelForSequenceClassification.from_pretrained(
