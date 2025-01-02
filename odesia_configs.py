@@ -306,7 +306,14 @@ PEFT_MODEL_CONFIG = {
                 'target_modules': ['q_proj', 'k_proj', 'v_proj', 'o_proj'],
                 'lora_dropout': 0.05, 
                 'bias': 'none',
-                'task_type': 'SEQ_CLS'
         }       
 }
 
+PEFT_TASK_MAPPING = {
+        'multi_class_classification': 'SEQ_CLS',
+        'multi_label_classification': 'SEQ_CLS',
+        'multi_class_classification_disagreements': 'SEQ_CLS',
+        'multi_label_classification_disagreements': 'SEQ_CLS',
+        'token_classification': 'TOKEN_CLS',
+        'question_answering': 'QUESTION_ANS',
+}
