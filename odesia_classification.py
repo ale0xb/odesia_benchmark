@@ -56,8 +56,12 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
         # Load model, trainer, and metrics
         self.seqeval = evaluate.load("seqeval")
         self.model = AutoModelForTokenClassification.from_pretrained(
-            self.model_path, num_labels=self.num_labels, id2label=self.id2label, label2id=self.label2id
+            self.model_path, torch_dtype="auto", num_labels=self.num_labels, id2label=self.id2label, label2id=self.label2id
         )
+
+        if self.peft_parameters:
+            ## This is a PEFT model 
+            self.model = self.convert_model_to_PEFT(self.model)
         
         self.trainer = self.load_trainer(model=self.model, 
                                          data_collator=self.data_collator, 
