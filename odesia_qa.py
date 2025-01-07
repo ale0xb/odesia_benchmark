@@ -3,7 +3,9 @@ from odesia_core import OdesiaHFModel
 from transformers import (AutoModelForQuestionAnswering, 
                           pipeline, 
                           DefaultDataCollator)
+from peft import LoraConfig, get_peft_model
 from evaluate import load
+from odesia_configs import PEFT_TASK_MAPPING
 
 
 class OdesiaQuestionAnswering(OdesiaHFModel):
@@ -22,13 +24,25 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
             self.tokenized_dataset.save_to_disk(self.dataset_path_tokenized)
 
         # Step 3. Loading model, trainer and metrics     
-        self.model = AutoModelForQuestionAnswering.from_pretrained(model_path)   
+        self.model = AutoModelForQuestionAnswering.from_pretrained(model_path)
+
+        if self.peft_parameters:
+        ## This is a PEFT model 
+            self.model = self.convert_model_to_PEFT(self.model)  
         self.trainer = self.load_trainer(model=self.model, 
                                          data_collator=self.data_collator, 
                                          tokenized_dataset=self.tokenized_dataset, 
                                          compute_metrics_function=None)
         self.metric = load("squad")
         self.predictions = {}
+    
+    def convert_model_to_PEFT(self, model):
+        lora_config = LoraConfig(**self.peft_parameters)
+        lora_config.task_type = PEFT_TASK_MAPPING[self.problem_type]
+        model = get_peft_model(model, lora_config)
+        model.config.pretraining_tp = 1
+        model.config.pad_token_id = self.tokenizer.pad_token_id
+        return model
 
     def preprocess_function(self, examples):
         questions = [q.strip() for q in examples["question"]]
@@ -57,7 +71,7 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
             while sequence_ids[idx] != 1:
                 idx += 1
             context_start = idx
-            while sequence_ids[idx] == 1:
+            while idx < len(sequence_ids) and sequence_ids[idx] == 1:
                 idx += 1
             context_end = idx - 1
 

@@ -101,9 +101,9 @@ def main():
                                 # 'exist_2023_t3_hard_soft',
                                 # 'exist_2023_t3_soft_soft',
                                 # 'mldoc_2018', # hasta aquí funcionan generativos
-                                'diann_2023',
+                                # 'diann_2023',
                                 # 'multiconer_2022',
-                                # 'sqad_2022_squad_2016',
+                                'sqad_2022_squad_2016',
                                 # 'sts_2017',
 
                             ],
