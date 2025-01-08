@@ -6,6 +6,7 @@ import os
 from datasets import load_from_disk
 from datasets import load_dataset
 import copy
+import gc
  
 class OdesiaAbstractModel(ABC):
     @abstractmethod
@@ -70,7 +71,7 @@ class OdesiaHFModel(OdesiaAbstractModel):
         if self.peft_parameters is not None: # This is a PEFT model (e.g. Llama3-8B)
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
             self.tokenizer.pad_token = self.tokenizer.eos_token
-            self.tokenizer.model_max_length = 512
+            self.tokenizer.model_max_length = 1024
 
     def load_trainer(self, model, tokenized_dataset, data_collator, compute_metrics_function):        
         
@@ -119,6 +120,8 @@ class OdesiaHFModel(OdesiaAbstractModel):
     def purge_model(self):
         del self.model
         del self.tokenizer
+        del self.trainer
+        gc.collect()
         torch.cuda.empty_cache()
 
     def compute_metrics(self):
