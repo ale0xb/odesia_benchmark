@@ -56,7 +56,11 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
         # Load model, trainer, and metrics
         self.seqeval = evaluate.load("seqeval")
         self.model = AutoModelForTokenClassification.from_pretrained(
-            self.model_path, torch_dtype="auto", num_labels=self.num_labels, id2label=self.id2label, label2id=self.label2id
+            self.model_path, 
+            torch_dtype="auto", 
+            num_labels=self.num_labels, 
+            id2label=self.id2label, 
+            label2id=self.label2id
         )
 
         if self.peft_parameters:
@@ -244,11 +248,7 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
         if not self.tokenized_dataset:
             if 'multi_label_classification' not in self.problem_type:
                 self.dataset = self.dataset.cast_column('label', ClassLabel(names=self.label_list))
-            # Check if tokenizer is from a PEFT model 
-            if self.peft_parameters: 
-                self.tokenized_dataset = self.dataset.map(lambda ex: self.tokenizer(ex["text"], truncation=True, padding=True, max_length=64), batched=True)
-            else:
-                self.tokenized_dataset = self.dataset.map(lambda ex: self.tokenizer(ex["text"], truncation=True, padding='max_length'), batched=True)
+            self.tokenized_dataset = self.dataset.map(lambda ex: self.tokenizer(ex["text"], truncation=True, padding='max_length'), batched=True)
         
             self.tokenized_dataset.save_to_disk(self.dataset_path_tokenized)
     

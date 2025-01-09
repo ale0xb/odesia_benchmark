@@ -262,7 +262,12 @@ DATASETS = [{'name' : 'dipromats_2023_t1',
              'dataset_config':{'evall_test_case':"SAQ2022",
                                'main_metric': 'f1',
                                'problem_type':'question_answering'}}
-            
+
+            ,{'name':'sqac_squad_2024',              
+             'dataset_config':{'evall_test_case':"SAQ2024",
+                               'main_metric': 'f1',
+                               'problem_type':'question_answering'}}
+
             ,{'name':'sts_2017',              
              'dataset_config':{'evall_test_case':"STS2017",
                                'main_metric': 'cosine_pearson',
@@ -287,13 +292,13 @@ GENERIC_MODEL_CONFIG = {
 PEFT_MODEL_CONFIG = {
         "output_dir" : "",
         "hf_parameters": {
-                'per_device_train_batch_size': 8,
+                # 'per_device_train_batch_size': 8,
                 'per_device_eval_batch_size' : 4,
-                'num_train_epochs': 5,
+                'num_train_epochs': 3,
                 'evaluation_strategy':"no",
                 # 'eval_strategy' : 'epoch',
                 # 'save_strategy':"epoch",
-                'weight_decay' : 0.01,
+                # 'weight_decay' : 0.01,
                 'warmup_ratio' : 0.1,
                 # 'logging_steps': 1,
                 'report_to':"none",     

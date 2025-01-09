@@ -42,17 +42,18 @@ def main():
                             # 'ixa-ehu/ixambert-base-cased', 
                             # 'xlm-roberta-large',
                             # 'xlm-roberta-base',
-                            'meta-llama/Meta-Llama-3-8B'                      
+                            # 'meta-llama/Meta-Llama-3.1-8B'                      
                         ],   
             }
 
-    PEFT_MODELS = ["meta-llama/Meta-Llama-3-8B"]
+    PEFT_MODELS = ["meta-llama/Meta-Llama-3-8B",
+                   "meta-llama/Meta-Llama-3.1-8B"]
 
     hparams_to_search_peft = {
-            'per_device_train_batch_size' : [8],
-            'gradient_accumulation_steps' : [4, 2],
-            'learning_rate': [1e-4, 3e-4, 5e-4],
-            'weight_decay': [0.1, 0.01]
+            'per_device_train_batch_size' : [2],
+            'gradient_accumulation_steps' : [16, 8],
+            'learning_rate': [1e-4, 3e-4, 1e-3],
+            'weight_decay': [0.01, 0.0]
     }
 
     hparams_to_search_small = {
@@ -91,19 +92,20 @@ def main():
                                 # 'dipromats_2023_t3',
                                 # 'exist_2022_t1',
                                 # 'exist_2022_t2',
-                                # 'exist_2023_t1_hard_hard',
-                                # 'exist_2023_t1_hard_soft',
+                                # # 'exist_2023_t1_hard_hard',
+                                # # 'exist_2023_t1_hard_soft',
                                 # 'exist_2023_t1_soft_soft',
-                                # 'exist_2023_t2_hard_hard',
-                                # 'exist_2023_t2_hard_soft',
+                                # # 'exist_2023_t2_hard_hard',
+                                # # 'exist_2023_t2_hard_soft',
                                 # 'exist_2023_t2_soft_soft',
-                                # 'exist_2023_t3_hard_hard',
-                                # 'exist_2023_t3_hard_soft',
+                                # # 'exist_2023_t3_hard_hard',
+                                # # 'exist_2023_t3_hard_soft',
                                 # 'exist_2023_t3_soft_soft',
                                 # 'mldoc_2018', # hasta aquí funcionan generativos
                                 # 'diann_2023',
                                 # 'multiconer_2022',
-                                'sqad_2022_squad_2016',
+                                # 'sqad_2022_squad_2016',
+                                'sqac_squad_2024'
                                 # 'sts_2017',
 
                             ],

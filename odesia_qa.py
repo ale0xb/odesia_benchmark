@@ -14,7 +14,10 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
         super().__init__(model_path, dataset_path, model_config, dataset_config)
         
         # Step 1. Load DataCollator            
-        self.data_collator = DefaultDataCollator()      
+        self.data_collator = DefaultDataCollator()
+
+        if self.peft_parameters:
+            self.tokenizer.model_max_length = 1024
 
         # Step 2. Tokenized the dataset 
         if not self.tokenized_dataset:            
@@ -24,7 +27,7 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
             self.tokenized_dataset.save_to_disk(self.dataset_path_tokenized)
 
         # Step 3. Loading model, trainer and metrics     
-        self.model = AutoModelForQuestionAnswering.from_pretrained(model_path)
+        self.model = AutoModelForQuestionAnswering.from_pretrained(model_path, torch_dtype="auto")
 
         if self.peft_parameters:
         ## This is a PEFT model 
@@ -49,7 +52,7 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
         inputs = self.tokenizer(
             questions,
             examples["context"],
-            max_length=384,
+            max_length=self.tokenizer.model_max_length - 128,
             truncation="only_second",
             return_offsets_mapping=True,
             padding="max_length",
