@@ -1,5 +1,5 @@
-import os
 import numpy as np
+import torch
 
 from datasets import ClassLabel
 
@@ -21,6 +21,8 @@ import pandas as pd
 from vendor.exist2023evaluation import ICM_Hard, ICM_Soft
 
 from odesia_configs import PEFT_TASK_MAPPING
+
+
 
 class OdesiaUniversalClassification(OdesiaHFModel):
     def __init__(self, model_path, dataset_path, model_config, dataset_config):
@@ -257,7 +259,7 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
                 self.model_path, 
                 num_labels=self.num_labels, 
                 torch_dtype="auto",
-                device_map="cuda:0",
+                device_map="auto",
                 problem_type='multi_label_classification' if 'multi_label_classification' in self.problem_type else None
             )
         

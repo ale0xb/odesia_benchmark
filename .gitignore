@@ -1,6 +1,7 @@
 venv
 datasets
 trained_models
+pretrained_models
 csvs
 preds
 __pycache__

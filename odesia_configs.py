@@ -1,3 +1,4 @@
+from peft import TaskType
 
 DATASETS = [{'name' : 'dipromats_2023_t1',             
              'dataset_config':{"evall_test_case":"DIPROMATS2023",
@@ -294,7 +295,7 @@ PEFT_MODEL_CONFIG = {
         "hf_parameters": {
                 # 'per_device_train_batch_size': 8,
                 'per_device_eval_batch_size' : 4,
-                'num_train_epochs': 3,
+                'num_train_epochs': 5,
                 'evaluation_strategy':"no",
                 # 'eval_strategy' : 'epoch',
                 # 'save_strategy':"epoch",
@@ -315,10 +316,10 @@ PEFT_MODEL_CONFIG = {
 }
 
 PEFT_TASK_MAPPING = {
-        'multi_class_classification': 'SEQ_CLS',
-        'multi_label_classification': 'SEQ_CLS',
-        'multi_class_classification_disagreements': 'SEQ_CLS',
-        'multi_label_classification_disagreements': 'SEQ_CLS',
-        'token_classification': 'TOKEN_CLS',
-        'question_answering': 'QUESTION_ANS',
+        'multi_class_classification': TaskType.SEQ_CLS,
+        'multi_label_classification': TaskType.SEQ_CLS,
+        'multi_class_classification_disagreements': TaskType.SEQ_CLS,
+        'multi_label_classification_disagreements': TaskType.SEQ_CLS,
+        'token_classification': TaskType.TOKEN_CLS,
+        'question_answering': TaskType.QUESTION_ANS,
 }

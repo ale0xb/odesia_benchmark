@@ -1,6 +1,8 @@
+import os
 import torch 
 from odesia_core import OdesiaHFModel
-from transformers import (AutoModelForQuestionAnswering, 
+from transformers import (AutoModel,
+                          AutoModelForQuestionAnswering, 
                           pipeline, 
                           DefaultDataCollator)
 from peft import LoraConfig, get_peft_model
@@ -27,8 +29,17 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
             self.tokenized_dataset.save_to_disk(self.dataset_path_tokenized)
 
         # Step 3. Loading model, trainer and metrics     
-        self.model = AutoModelForQuestionAnswering.from_pretrained(model_path, torch_dtype="auto")
+        self.model = AutoModel.from_pretrained(model_path, torch_dtype="auto")
 
+        if 'Llama' in model_path:
+            # Hack for bug https://github.com/huggingface/transformers/issues/30381
+            # Create folder for pretrained models if it does not exist
+            print("Saving and reloading Llama model to avoid bug")
+            if not os.path.exists("pretrained_models"):
+                os.makedirs("pretrained_models")
+            save_route = f"pretrained_models/{model_path.split('/')[-1]}-base_model"
+            self.model.save_pretrained(save_route)
+            self.model = AutoModelForQuestionAnswering.from_pretrained(save_route, torch_dtype="auto")
         if self.peft_parameters:
         ## This is a PEFT model 
             self.model = self.convert_model_to_PEFT(self.model)  
@@ -40,12 +51,14 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
         self.predictions = {}
     
     def convert_model_to_PEFT(self, model):
+        print("Convert model to PEFT")
         lora_config = LoraConfig(**self.peft_parameters)
         lora_config.task_type = PEFT_TASK_MAPPING[self.problem_type]
         model = get_peft_model(model, lora_config)
         model.config.pretraining_tp = 1
         model.config.pad_token_id = self.tokenizer.pad_token_id
         return model
+    
 
     def preprocess_function(self, examples):
         questions = [q.strip() for q in examples["question"]]
@@ -112,37 +125,48 @@ class OdesiaQuestionAnswering(OdesiaHFModel):
         results = self.metric.compute(predictions=predictions, references=results_prediction['references'])
         return results
     
-    def predict(self, split="test", num_examples = "max", return_references=False):
+    def predict(self, split="test", num_examples="max", return_references=False):
         len_num_example = len(self.dataset[split])
         num_examples = len_num_example if num_examples == "max" or num_examples > len_num_example else num_examples        
         predictions_dataset = self.dataset[split].select(range(num_examples))
         
-        question_answerer = pipeline("question-answering", model=self.model.to(torch.device("cpu")), tokenizer=self.tokenizer)
-        
-        
         num_predictions = len(predictions_dataset)
         predictions = []
         references = []
-        for i,item in enumerate(predictions_dataset):            
-            
-            result = question_answerer(question=item["question"], context=item['context'])                        
-            result['prediction_text'] = result['answer']
-            del result['answer']
-            result['id'] = item["id"]
-            
-            if i%200 == 0:
-                print(f"Generation prediction ({i} of {num_predictions}){result}")
-            
-            predictions.append(result)    
-            references.append({'answers' : item['answers'], "id":item["id"]})
         
-        self.predictions[split] = predictions
-
+        for i, item in enumerate(predictions_dataset):
+            inputs = self.tokenizer(
+                item["question"],
+                item["context"],
+                return_tensors="pt",
+                truncation=True,
+                padding=True
+            ).to(self.model.device)
+            
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+            
+            answer_start_index = outputs.start_logits.argmax()
+            answer_end_index = outputs.end_logits.argmax() + 1
+            
+            answer = self.tokenizer.convert_tokens_to_string(
+                self.tokenizer.convert_ids_to_tokens(inputs["input_ids"][0][answer_start_index:answer_end_index])
+            )
+            
+            result = {
+                'prediction_text': answer,
+                'id': item["id"]
+            }
+            
+            if i % 200 == 0:
+                print(f"Generation prediction ({i} of {num_predictions}) {result}")
+            
+            predictions.append(result)
+            references.append({'answers': item['answers'], "id": item["id"]})
+        
         if return_references:
-            return {'predictions': predictions,
-                    'references' : references} 
-        else:
-            return {split:predictions}
+            return {"predictions": predictions, "references": references}
+        return {"predictions": predictions}
                 
     def compute_metrics(self):
         return None

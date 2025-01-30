@@ -67,6 +67,9 @@ class OdesiaHFModel(OdesiaAbstractModel):
         else:
             self.tokenizer = AutoTokenizer.from_pretrained(model_path, add_prefix_space=True) 
             self.tokenized_dataset = None
+
+        if self.tokenizer.model_max_length > 1000000:
+            self.tokenizer.model_max_length = 8192
         
         if self.peft_parameters is not None: # This is a PEFT model (e.g. Llama3-8B)
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
