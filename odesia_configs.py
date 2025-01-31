@@ -295,8 +295,9 @@ PEFT_MODEL_CONFIG = {
         "hf_parameters": {
                 # 'per_device_train_batch_size': 8,
                 'per_device_eval_batch_size' : 4,
-                'num_train_epochs': 5,
+                'num_train_epochs': 10,
                 'evaluation_strategy':"no",
+                'lr_scheduler_type': 'cosine',
                 # 'eval_strategy' : 'epoch',
                 # 'save_strategy':"epoch",
                 # 'weight_decay' : 0.01,
@@ -309,8 +310,8 @@ PEFT_MODEL_CONFIG = {
         "peft_parameters": {
                 'r': 16, 
                 'lora_alpha': 8,
-                'target_modules': ['q_proj', 'k_proj', 'v_proj', 'o_proj'],
-                'lora_dropout': 0.05, 
+                'target_modules':  ['q_proj', 'k_proj', 'v_proj', 'o_proj', 'up_proj', 'down_proj', 'gate_proj'],
+                'lora_dropout': 0, 
                 'bias': 'none',
         }       
 }

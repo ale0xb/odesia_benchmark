@@ -65,8 +65,8 @@ def main():
                    "TinyLlama/TinyLlama_v1.1"]
 
     hparams_to_search_peft = {
-            'per_device_train_batch_size' : [8],
-            'gradient_accumulation_steps' : [4, 2],
+            'per_device_train_batch_size' : [1],
+            'gradient_accumulation_steps' : [4],
             'learning_rate': [1e-4, 3e-4, 1e-3],
             'weight_decay': [0.01, 0.0]
     }
@@ -79,7 +79,7 @@ def main():
     
     hparams_to_search_large = {
             'per_device_train_batch_size' : [8],
-            'gradient_accumulation_steps' : [4, 2],
+            'gradient_accumulation_steps' : [2, 4],
             'learning_rate': [0.00001, 0.00003, 0.00005],
             'weight_decay': [0.1, 0.01]
         }
@@ -115,9 +115,9 @@ def main():
                                 # 'exist_2023_t2_soft_soft',
                                 # # # 'exist_2023_t3_hard_hard',
                                 # # # 'exist_2023_t3_hard_soft',
-                                'exist_2023_t3_soft_soft',
+                                # 'exist_2023_t3_soft_soft',
                                 # 'mldoc_2018', # hasta aquí funcionan generativos
-                                # 'diann_2023',
+                                'diann_2023',
                                 # 'multiconer_2022',
                                 # 'sqad_2022_squad_2016',
                                 # 'sqac_squad_2024'

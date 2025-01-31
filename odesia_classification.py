@@ -84,10 +84,12 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
             [self.label_list[p] for (p, l) in zip(prediction, label) if l != -100]
             for prediction, label in zip(predictions, labels)
         ]
+        true_predictions = [[x for j in true_predictions for x in j]]
         true_labels = [
             [self.label_list[l] for (p, l) in zip(prediction, label) if l != -100]
             for prediction, label in zip(predictions, labels)
         ]
+        true_labels = [[x for j in true_labels for x in j]]
 
         results = self.seqeval.compute(predictions=true_predictions, references=true_labels)
         return {
@@ -147,24 +149,20 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
             aligned_tokens = []
             aligned_labels = []
             previous_word_idx = None
+            word_to_label = {}
 
             for idx, word_idx in enumerate(word_ids):
-                if word_idx is None or word_idx == previous_word_idx:
-                    continue
-                aligned_tokens.append(tokens[word_idx])
-                aligned_labels.append(predicted_labels[idx])
-                previous_word_idx = word_idx
+                if word_idx is not None:
+                    word_to_label[word_idx] = predicted_labels[idx]  # Overwrite with the last token's label
+
+            previous_word_idx = None
+            for idx, word_idx in enumerate(word_ids):
+                if word_idx is not None and word_idx != previous_word_idx:
+                    aligned_tokens.append(tokens[word_idx])
+                    aligned_labels.append(word_to_label[word_idx])  # Get the last stored label
+                    previous_word_idx = word_idx  # Update previous word index
             
             aligned_tokens, aligned_labels = self.adjust_alignment(tokens, aligned_tokens, aligned_labels)
-
-            def list_difference(list1, list2):
-                set1 = set(list1)
-                set2 = set(list2)
-                
-                difference1 = set1 - set2  # Elementos en list1 pero no en list2
-                difference2 = set2 - set1  # Elementos en list2 pero no en list1
-                
-                return list(difference1), list(difference2)
 
             # Verificación de longitud
             if len(aligned_tokens) != len(tokens):
@@ -189,6 +187,8 @@ class OdesiaTokenClassification(OdesiaUniversalClassification):
             raise ValueError(f"Mismatch in number of predictions: {len(aligned_predictions)} vs references: {len(dataset_subset)}")
 
         return aligned_predictions
+    
+    
     
     def adjust_alignment(self, tokens, aligned_tokens, aligned_labels):
         idx_orig = 0
@@ -259,7 +259,7 @@ class OdesiaTextClassification(OdesiaUniversalClassification):
                 self.model_path, 
                 num_labels=self.num_labels, 
                 torch_dtype="auto",
-                device_map="auto",
+                device_map="cuda:0",
                 problem_type='multi_label_classification' if 'multi_label_classification' in self.problem_type else None
             )
         

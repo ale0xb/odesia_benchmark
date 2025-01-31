@@ -65,7 +65,9 @@ def odesia_benchmark(model : str,
                     '''
                     list_grid_models = df_past_trainings['model_config.output_dir'].unique()
                     dict_equivalences = {32: ['per_device_train_batch_size_8_gradient_accumulation_steps_4', 'per_device_train_batch_size_4_gradient_accumulation_steps_8', 'per_device_train_batch_size_32'],
-                                        16: ['per_device_train_batch_size_8_gradient_accumulation_steps_2', 'per_device_train_batch_size_4_gradient_accumulation_steps_4', 'per_device_train_batch_size_16']}
+                                        16: ['per_device_train_batch_size_8_gradient_accumulation_steps_2', 'per_device_train_batch_size_4_gradient_accumulation_steps_4', 'per_device_train_batch_size_16'],
+                                        8: ['per_device_train_batch_size_4_gradient_accumulation_steps_2', 'per_device_train_batch_size_2_gradient_accumulation_steps_4'],
+                                        4: ['per_device_train_batch_size_1_gradient_accumulation_steps_4'],}
                     already_trained = False
                     if hparams.get('gradient_accumulation_steps') != None:
                         total_batch_size = hparams['gradient_accumulation_steps'] * hparams['per_device_train_batch_size']
