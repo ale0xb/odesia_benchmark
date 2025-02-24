@@ -74,7 +74,7 @@ class OdesiaHFModel(OdesiaAbstractModel):
         if self.peft_parameters is not None: # This is a PEFT model (e.g. Llama3-8B)
             self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
             self.tokenizer.pad_token = self.tokenizer.eos_token
-            self.tokenizer.model_max_length = 512 # Set this to 512 to allow a fair comparison with encoder-decoder models. 
+            self.tokenizer.model_max_length = 128 # Set this to 512 to allow a fair comparison with encoder-decoder models. 
 
     def load_trainer(self, model, tokenized_dataset, data_collator, compute_metrics_function):        
         
