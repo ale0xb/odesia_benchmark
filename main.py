@@ -39,6 +39,8 @@ def main():
                             # 'xlm-roberta-large', 
                             # 'xlm-roberta-base',
                             # 'meta-llama/Meta-Llama-3.1-8B',
+                            'mistralai/Mistral-7B-v0.3',
+                            'Qwen/Qwen2.5-7B',
                             # 'answerdotai/ModernBERT-base',
                             # 'answerdotai/ModernBERT-large'                                                
                             ],
@@ -54,7 +56,9 @@ def main():
                             # 'xlm-roberta-large',
                             # 'xlm-roberta-base',
                             # 'TinyLlama/TinyLlama_v1.1',
-                            'meta-llama/Meta-Llama-3.1-8B',
+                            # 'meta-llama/Meta-Llama-3.1-8B',
+                            'mistralai/Mistral-7B-v0.3',
+                            'Qwen/Qwen2.5-7B',
                             # 'answerdotai/ModernBERT-base',
                             # 'answerdotai/ModernBERT-large'                     
                         ],   
@@ -62,11 +66,13 @@ def main():
 
     PEFT_MODELS = ["meta-llama/Meta-Llama-3-8B",
                    "meta-llama/Meta-Llama-3.1-8B",
+                   "Qwen/Qwen2.5-7B",
+                   'mistralai/Mistral-7B-v0.3',
                    "TinyLlama/TinyLlama_v1.1"]
 
     hparams_to_search_peft = {
-            'per_device_train_batch_size' : [1],
-            'gradient_accumulation_steps' : [4],
+            'per_device_train_batch_size' : [8],
+            'gradient_accumulation_steps' : [4, 2],
             'learning_rate': [1e-4, 3e-4, 1e-3],
             'weight_decay': [0.01, 0.0]
     }
@@ -102,22 +108,22 @@ def main():
                              language=language, 
                              grid_search=hparams_to_search, 
                              datasets_to_eval=[
-                                # 'dipromats_2023_t1',
-                                # 'dipromats_2023_t2',
-                                # 'dipromats_2023_t3',
+                                'dipromats_2023_t1',
+                                'dipromats_2023_t2',
+                                'dipromats_2023_t3',
                                 # 'exist_2022_t1',
                                 # 'exist_2022_t2',
-                                # # # 'exist_2023_t1_hard_hard',
-                                # # # 'exist_2023_t1_hard_soft',
+                                # # 'exist_2023_t1_hard_hard',
+                                # # 'exist_2023_t1_hard_soft',
                                 # 'exist_2023_t1_soft_soft',
-                                # # # 'exist_2023_t2_hard_hard',
-                                # # # 'exist_2023_t2_hard_soft',
+                                # # 'exist_2023_t2_hard_hard',
+                                # # 'exist_2023_t2_hard_soft',
                                 # 'exist_2023_t2_soft_soft',
-                                # # # 'exist_2023_t3_hard_hard',
-                                # # # 'exist_2023_t3_hard_soft',
+                                # # 'exist_2023_t3_hard_hard',
+                                # # 'exist_2023_t3_hard_soft',
                                 # 'exist_2023_t3_soft_soft',
                                 # 'mldoc_2018', # hasta aquí funcionan generativos
-                                'diann_2023',
+                                # 'diann_2023',
                                 # 'multiconer_2022',
                                 # 'sqad_2022_squad_2016',
                                 # 'sqac_squad_2024'
